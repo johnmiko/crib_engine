@@ -13,6 +13,37 @@ def debug(s):
         print(s)
 
 
+def score_play(card_seq):
+    """Return score for latest move in an active play sequence.
+
+    :param card_seq: List of all cards played (oldest to newest).
+    :return: Points earned by player of latest card played in the sequence.
+    """
+    score = 0
+    score_scenarios = [scoring.ExactlyEqualsN(n=15), scoring.ExactlyEqualsN(n=31),
+                        scoring.HasPairTripleQuad(), scoring.HasStraight_DuringPlay()]
+    for scenario in score_scenarios:
+        s, desc = scenario.check(card_seq[:])
+        score += s
+        print("[SCORE] " + desc) if desc else None
+    return score
+
+def score_hand(cards, is_crib: bool = False):
+    """Score a hand at the end of a round.
+
+    :param cards: Cards in a single player's hand.
+    :return: Points earned by player.
+    """
+    score = 0
+    score_scenarios = [scoring.CountCombinationsEqualToN(n=15),
+                        scoring.HasPairs_InHand(), scoring.HasStraight_InHand(), scoring.HasFlush(is_crib=is_crib)]
+    for scenario in score_scenarios:
+        s, desc = scenario.check(cards[:])
+        score += s
+        print("[EOR SCORING] " + desc) if desc else None
+    return score
+
+
 class CribbageGame:
     """Main cribbage game class."""
     
@@ -202,34 +233,11 @@ class CribbageRound:
 
 
     def _score_play(self, card_seq):
-        """Return score for latest move in an active play sequence.
-
-        :param card_seq: List of all cards played (oldest to newest).
-        :return: Points earned by player of latest card played in the sequence.
-        """
-        score = 0
-        score_scenarios = [scoring.ExactlyEqualsN(n=15), scoring.ExactlyEqualsN(n=31),
-                           scoring.HasPairTripleQuad(), scoring.HasStraight_DuringPlay()]
-        for scenario in score_scenarios:
-            s, desc = scenario.check(card_seq[:])
-            score += s
-            print("[SCORE] " + desc) if desc else None
-        return score
+        return score_play(card_seq)
 
     def _score_hand(self, cards, is_crib: bool = False):
-        """Score a hand at the end of a round.
+        return score_hand(cards, is_crib)
 
-        :param cards: Cards in a single player's hand.
-        :return: Points earned by player.
-        """
-        score = 0
-        score_scenarios = [scoring.CountCombinationsEqualToN(n=15),
-                           scoring.HasPairs_InHand(), scoring.HasStraight_InHand(), scoring.HasFlush(is_crib=is_crib)]
-        for scenario in score_scenarios:
-            s, desc = scenario.check(cards[:])
-            score += s
-            print("[EOR SCORING] " + desc) if desc else None
-        return score
 
     def _score_hand_with_breakdown(self, cards, is_crib: bool = False):
         """Score a hand and return both score and breakdown.

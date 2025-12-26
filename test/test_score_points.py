@@ -183,7 +183,7 @@ class TestHasStraight_DuringPlay(unittest.TestCase):
                 pc.Card(suit=pc.Deck.SUITS['hearts'], rank=pc.Deck.RANKS['four']),
                 pc.Card(suit=pc.Deck.SUITS['spades'], rank=pc.Deck.RANKS['five']),
                 pc.Card(suit=pc.Deck.SUITS['diamonds'], rank=pc.Deck.RANKS['six']),
-                pc.Card(suit=pc.Deck.RANKS['diamonds'], rank=pc.Deck.RANKS['seven']),
+                pc.Card(suit=pc.Deck.SUITS['diamonds'], rank=pc.Deck.RANKS['seven']),
                 pc.Card(suit=pc.Deck.SUITS['clubs'], rank=pc.Deck.RANKS['three'])]
         score, _ = self.s.check(hand)
         self.assertEqual(score, 6)
@@ -246,8 +246,8 @@ class TestHasStraight_InHand(unittest.TestCase):
         hand = [pc.Card(suit=pc.Deck.SUITS['hearts'], rank=pc.Deck.RANKS['two']),
                 pc.Card(suit=pc.Deck.SUITS['hearts'], rank=pc.Deck.RANKS['four']),
                 pc.Card(suit=pc.Deck.SUITS['spades'], rank=pc.Deck.RANKS['five']),
-                pc.Card(suit=pc.Deck.RANKS['diamonds'], rank=pc.Deck.RANKS['six']),
-                pc.Card(suit=pc.Deck.RANKS['diamonds'], rank=pc.Deck.RANKS['seven']),
+                pc.Card(suit=pc.Deck.SUITS['diamonds'], rank=pc.Deck.RANKS['six']),
+                pc.Card(suit=pc.Deck.SUITS['diamonds'], rank=pc.Deck.RANKS['seven']),
                 pc.Card(suit=pc.Deck.SUITS['clubs'], rank=pc.Deck.RANKS['three'])]
         score, _ = self.s.check(hand)
         self.assertEqual(score, 6)

@@ -1,0 +1,13 @@
+[project]
+name = "cribbage_engine"
+version = "1.0.0"
+description = "Shared cribbage game logic"
+requires-python = ">=3.13"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["cribbage"]

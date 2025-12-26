@@ -3,6 +3,12 @@ import random
 from . import scoring
 from .player import HumanPlayer, RandomPlayer
 from .playingcards import Deck
+from logging import getLogger
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = getLogger(__name__)
+
+
 
 DEBUG = True  # Debug flag for debugging output
 
@@ -52,7 +58,7 @@ class CribbageGame:
     CRIB_SIZE = 4  # size of the crib
     N_GO = 31  # round sequence ends at this card point total
 
-    def __init__(self, players):
+    def __init__(self, players, seed: int | None = None):
         self.players = players  #: the two players
         self.board = CribbageBoard(self.players, self.MAX_SCORE)  #: the cribbage board for scoring
         assert len(self.players) == 2, "Currently, only 2-player games are supported."
@@ -83,7 +89,9 @@ class CribbageGame:
             r = CribbageRound(self, dealer=dealer)
             r.play()
             game_score = [self.board.get_score(p) for p in self.players]
+            logger.info(f"{game_score=}")
             debug(self.board)
+        return game_score # list of player 1's final peg vs player 2's final peg
 
 
 class CribbageRound:
@@ -92,13 +100,16 @@ class CribbageRound:
     def __init__(self, game, dealer):
         # Replenish deck for each round
         self.deck = Deck()
+        self.game_winner = None
         self.game = game
         self.hands = {player: [] for player in self.game.players}
+        self.player_hand_after_discard = {player: [] for player in self.game.players}
         self.crib = []
         self.table = []
         self.starter = None
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p != dealer][0]
+        self.most_recent_player = None
 
     def _deal(self):
         """Deal cards.
@@ -118,10 +129,10 @@ class CribbageRound:
         """Solicit crib card decisions from players and place these cards in the crib.
 
         :return: None
-        """
+        """        
         for p in self.game.players:
-            cards_to_crib = p.select_crib_cards(self.hands[p])
-            debug("Cards cribbed: %s" % cards_to_crib)
+            cards_to_crib = p.select_crib_cards(self.hands[p], dealer_is_self=(p == self.dealer))
+            debug(f"Cards cribbed: {cards_to_crib}")
             if not set(cards_to_crib).issubset(set(self.hands[p])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
             elif len(cards_to_crib) != 2:
@@ -130,6 +141,7 @@ class CribbageRound:
                 self.crib += cards_to_crib
                 for card in cards_to_crib:
                     self.hands[p].remove(card)
+                self.player_hand_after_discard[p] = self.hands[p][:]
         assert len(self.crib) == self.game.CRIB_SIZE, "Crib size is not %s" % self.game.CRIB_SIZE
 
     def table_to_str(self, sequence_start_idx):
@@ -142,11 +154,11 @@ class CribbageRound:
         """
         prev, curr = "", ""
         for play in self.table[:sequence_start_idx]:
-            prev += str(play['card']) + ", "
+            prev += str(play) + ", "
         if prev:
             prev = "(" + prev[:-2] + ") "
         for play in self.table[sequence_start_idx:]:
-            curr += str(play['card']) + ", "
+            curr += str(play) + ", "
         return prev + curr[:-2]
 
     def _cut(self):
@@ -161,7 +173,8 @@ class CribbageRound:
         :param sequence_start_idx: Table index where current sequence begins.
         :return: Total value of cards in active sequence.
         """
-        return sum(i['card'].get_value() for i in self.table[sequence_start_idx:]) if self.table else 0
+        return_val = sum(i.get_value() for i in self.table[sequence_start_idx:]) if self.table else 0
+        return return_val
 
     def play(self):
         """Start cribbage round."""
@@ -176,21 +189,25 @@ class CribbageRound:
             self.game.board.peg(self.dealer, 1)
             print("2 points to %s for his heels." % str(self.dealer))
         active_players = [self.nondealer, self.dealer]
-        while sum([len(v) for v in self.hands.values()]):
+        while sum([len(v) for v in self.hands.values()]) and self.game_winner is None:
             sequence_start_idx = len(self.table)
-            while active_players:
+            while active_players and self.game_winner is None:
                 for p in active_players:
                     print("Table: " + self.table_to_str(sequence_start_idx))
                     print("Player %s's hand: %s" % (p, self.hands[p]))
+                    logger.info(f"{self.table}")
+                    print(f"table is {self.table}")
                     card = p.select_card_to_play(hand=self.hands[p], table=self.table[sequence_start_idx:],
-                                                 crib=self.crib)
+                                                 crib=self.crib, count=self.get_table_value(sequence_start_idx))
                     if card.get_value() + self.get_table_value(sequence_start_idx) > 31 or card is None:
                         print("Player %s chooses go." % str(p))
                         loser = loser if loser else p
                         active_players.remove(p)
                         # If no one can play any more cards, give point to player of last card played
                     else:
-                        self.table.append({'player': p, 'card': card})
+                        # self.table.append({'player': p, 'card': card})
+                        self.table.append(card)
+                        self.most_recent_player = p
                         self.hands[p].remove(card)
                         if not self.hands[p]:
                             active_players.remove(p)
@@ -199,29 +216,38 @@ class CribbageRound:
                         # Consider cards played by both players when scoring during play
                         assert self.get_table_value(sequence_start_idx) <= 31, \
                             "Value of cards on table must be <= 31 to be eligible for scoring."
-                        score = self._score_play(card_seq=[move['card'] for move in self.table[sequence_start_idx:]])
+                        # only scores the latest play, need to test
+                        sequence = self.table + [card]
+                        score = self._score_play(sequence)
+                        # score = self._score_play(card_seq=[move['card'] for move in self.table[sequence_start_idx:]])
                         if score:
-                            self.game.board.peg(p, score)            
-            self.go_or_31_reached(active_players)
+                            winner = self.game.board.peg(p, score)   
+                            if winner is not None:
+                                self.game_winner = winner
+                                break
+
+            if self.game_winner is None:
+                self.go_or_31_reached(active_players)
 
         # Score each player's hand
-        for p in self.game.players:
-            p_cards_played = [move['card'] for move in self.table if move['player'] == p]
-            print("Scoring " + str(p) + "'s hand: " + str(p_cards_played + [self.starter]))
-            score = self._score_hand(cards=p_cards_played + [self.starter], is_crib=False)  # Include starter card as part of hand
-            if score:
-                self.game.board.peg(p, score)
+        if self.game_winner is None:
+            for p in self.game.players:
+                p_cards_played = self.player_hand_after_discard[p] + [self.starter]
+                # print("Scoring " + str(p) + "'s hand: " + str(p_cards_played))
+                score = self._score_hand(cards=self.player_hand_after_discard[p], is_crib=False)  # Include starter card as part of hand
+                if score:
+                    self.game.board.peg(p, score)
 
-        # Score the crib
-        print("Scoring the crib: " + str(self.crib + [self.starter]))
-        score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)  # Include starter card as part of crib
-        if score:
-            self.game.board.peg(self.dealer, score)
+            # Score the crib
+            print("Scoring the crib: " + str(self.crib + [self.starter]))
+            score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)  # Include starter card as part of crib
+            if score:
+                self.game.board.peg(self.dealer, score)
 
     def go_or_31_reached(self, active_players):
         # If both players have reached 31 or "go" and not run out of cards, continue play
         if len(active_players) == 0:
-            player_of_last_card = self.table[-1]['player']
+            player_of_last_card = self.most_recent_player
             self.game.board.peg(player_of_last_card, 1)
             print("Point to %s for last card played." % player_of_last_card)
             # Fix: mutate the list in place instead of reassigning
@@ -289,8 +315,9 @@ class CribbageBoard:
         assert points > 0, "You must peg 1 or more points."
         self.pegs[player]['rear'] = self.pegs[player]['front']
         self.pegs[player]['front'] += points
-        if self.pegs[player]['front'] > self.max_score:
+        if self.pegs[player]['front'] >= self.max_score:
             self.pegs[player]['front'] = self.max_score
+            return player
 
     def get_score(self, player):
         """Return a given player's current score.
@@ -298,7 +325,9 @@ class CribbageBoard:
         :param player: Player to check.
         :return: Score for player.
         """
-        return self.pegs[player]['front']
+        front_peg = self.pegs[player]['front']
+        logger.debug(f"{front_peg=}")
+        return front_peg
 
 
 class IllegalCardChoiceError(Exception):

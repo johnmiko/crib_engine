@@ -39,7 +39,7 @@ class Player(metaclass=ABCMeta):
 class RandomPlayer(Player):
 	"""A player that makes random decisions."""
 
-	def select_crib_cards(self, hand):
+	def select_crib_cards(self, hand, dealer_is_self):
 		return random.sample(hand, 2)
 
 	def select_card_to_play(self, hand, table, crib):
@@ -75,7 +75,7 @@ class HumanPlayer(Player):
 					cards_selected.append(cards[idx-1])
 		return cards_selected
 
-	def select_crib_cards(self, hand):
+	def select_crib_cards(self, hand, dealer_is_self):
 		return self.present_cards_for_selection(cards=hand, n_cards=2)
 
 	def select_card_to_play(self, hand, table, crib):

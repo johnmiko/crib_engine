@@ -2,48 +2,47 @@ import unittest
 from cribbage.playingcards import Card, Deck
 
 
-class TestCardClass(unittest.TestCase):
-    def setUp(self):
-        rank_ace = Deck.RANKS['ace']
-        rank_two = Deck.RANKS['two']
-        self.card = Card(rank=Deck.RANKS['ace'], suit=Deck.SUITS['hearts'])
-        self.acecard = Card(rank=rank_ace, suit=Deck.SUITS['hearts'])
-        self.twocard = Card(rank=rank_two, suit=Deck.SUITS['hearts'])
+def test_face_cards_are_created_correctly():    
+    card = Card('ah')
+    assert card.rank == 'a'
+    assert card.suit == 'h'
+    assert card.value == 1
+    card = Card('jd')
+    assert card.rank == 'j'
+    assert card.suit == 'd'
+    assert card.value == 10
+    card = Card('qs')
+    assert card.rank == 'q'
+    assert card.suit == 's'
+    assert card.value == 10
+    card = Card('ks')
+    assert card.rank == 'k'
+    assert card.suit == 's'
+    assert card.value == 10
 
-    def test_to_str(self):
-        self.assertEqual(str(self.card), 'A\u2665')
+def test_cards_add_correctly():
+    card1 = Card('5h')
+    card2 = Card('7d')
+    assert card1 + card2 == 12
+    assert card1 + 3 == 8
 
-    def test_lt(self):
-        self.assertEqual(self.twocard < self.acecard, False)
-        self.assertEqual(self.acecard < self.twocard, True)
-        self.assertEqual(self.acecard < self.acecard, False)
-        self.assertEqual(self.twocard < 3, True)
-        self.assertEqual(self.twocard < 2, False)
-        self.assertEqual(self.twocard < -2, False)
+def test_default_deck_is_random():
+    deck1 = Deck()
+    deck2 = Deck()
+    assert deck1.cards != deck2.cards
 
-    def test_gt(self):
-        self.assertEqual(self.twocard > self.acecard, True)
-        self.assertEqual(self.acecard > self.twocard, False)
-        self.assertEqual(self.acecard > self.acecard, False)
-        self.assertEqual(self.twocard > 3, False)
-        self.assertEqual(self.twocard > 2, False)
-        self.assertEqual(self.twocard > -2, True)
-
-    def test_eq(self):
-        self.assertEqual(self.twocard == self.acecard, False)
-        self.assertEqual(self.acecard == self.twocard, False)
-        self.assertEqual(self.acecard == self.acecard, True)
-        self.assertEqual(self.twocard == 3, False)
-        self.assertEqual(self.twocard == 2, True)
-        self.assertEqual(self.twocard == -2, False)
-
-    def test_add(self):
-        self.assertEqual(self.twocard + self.acecard, 3)
-        self.assertEqual(self.acecard + self.twocard, 3)
-        self.assertEqual(self.acecard + self.acecard, 2)
-        self.assertEqual(self.twocard + self.twocard, 4)
-        self.assertEqual(self.twocard + 3, 5)
-
+def test_seeded_deck_is_deterministic():
+    deck1 = Deck(seed=42)
+    deck2 = Deck(seed=42)
+    deck1_pre_shuffle = deck1.cards.copy()
+    assert deck1.cards == deck2.cards
+    deck1.cut()
+    deck2.cut()
+    assert deck1.cards == deck2.cards
+    deck1.shuffle()
+    deck2.shuffle()
+    assert deck1.cards == deck2.cards
+    assert deck1.cards != deck1_pre_shuffle
 
 class TestDeckClass(unittest.TestCase):
     def setUp(self):

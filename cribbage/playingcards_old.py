@@ -62,12 +62,28 @@ class Deck:
         self.cards = self.cards[cut_point:] + self.cards[:cut_point]
         assert len(self.cards) == len_precut, "Cards lost in cut."
 
-def get_random_hand(num_cards: int = 6, seed: int | None = None):
-    deck = Deck(seed=seed)
-    hand = []
-    for _ in range(num_cards):
-        hand.append(deck.draw())
-    return hand    
+
+# class CardFactory:
+#     # Create a card factory to more lazily create cards in tests    
+#     @staticmethod
+#     def create_hand_from_strs(card_strs: List[str]):
+#         return [CardFactory.create_from_str(s) for s in card_strs]     
+    
+#     @staticmethod
+#     def create_from_str(card_str: str):
+#         if len(card_str) != 2:
+#             raise ValueError(f"Card string needs to be 2 characters: {card_str}")
+#         rank_shorthand = card_str[0]
+#         suit_letter = card_str[1]
+#         return CardFactory.create(rank_shorthand, suit_letter)
+
+#     @staticmethod
+#     def create(rank_shorthand: str, suit_letter: str):
+#         rank = Deck.RANKS[rank_name_map[rank_shorthand.lower()]]
+#         suit = Deck.SUITS[suit_name_map[suit_letter.lower()]]
+#         return Card(rank, suit)
+
+    
 
 def build_hand(card_str_list: List[str]):
     hand = []

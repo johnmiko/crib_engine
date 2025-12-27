@@ -1,8 +1,9 @@
 import random
+from typing import List
 
 
 
-class Deck:
+class OLDDeck:
     """Deck of cards."""
     SUITS = {
         'hearts': {'name': 'hearts', 'symbol': '\u2665', 'unicode_flag': 'B'},
@@ -52,6 +53,46 @@ class Deck:
         self.cards = self.cards[cut_point:] + self.cards[:cut_point]
         assert len(self.cards) == len_precut, "Cards lost in cut."
 
+suit_name_map = {
+	'h': 'hearts',
+	'd': 'diamonds',
+	'c': 'clubs',
+	's': 'spades'
+}
+rank_name_map = {
+	'a': 'ace',	
+	'2': 'two',
+	'3': 'three',
+	'4': 'four',
+	'5': 'five',
+	'6': 'six',	
+	'7': 'seven',	
+	'8': 'eight',
+	'9': 'nine',	
+	'10': 'ten',	
+	'j': 'jack',	
+	'q': 'queen',
+	'k': 'king'}
+
+class CardFactory:
+	# Create a card factory to more lazily create cards in tests	
+	@staticmethod
+	def create_hand_from_strs(card_strs: List[str]):
+		return [CardFactory.create_from_str(s) for s in card_strs] 	
+	
+	@staticmethod
+	def create_from_str(card_str: str):
+		if len(card_str) != 2:
+			raise ValueError(f"Card string needs to be 2 characters: {card_str}")
+		rank_shorthand = card_str[0]
+		suit_letter = card_str[1]
+		return CardFactory.create(rank_shorthand, suit_letter)
+
+	@staticmethod
+	def create(rank_shorthand: str, suit_letter: str):
+		rank = Deck.RANKS[rank_name_map[rank_shorthand.lower()]]
+		suit = Deck.SUITS[suit_name_map[suit_letter.lower()]]
+		return Card(rank, suit)
 
 class Card:
 	def __init__(self, rank, suit):

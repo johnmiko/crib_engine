@@ -37,6 +37,7 @@ value_map = {
     'k': 10
 }
 
+
 class Deck:
     RANKS = ['a','2','3','4','5','6','7','8','9','10','j','q','k']
     SUITS = ['h','d','c','s']  # hearts, diamonds, clubs, spades
@@ -61,6 +62,9 @@ class Deck:
             cut_point = self._rng.randrange(len(self.cards))
         self.cards = self.cards[cut_point:] + self.cards[:cut_point]
         assert len(self.cards) == len_precut, "Cards lost in cut."
+
+    def to_index(self) -> int:
+        return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]
 
 def get_random_hand(num_cards: int = 6, seed: int | None = None):
     deck = Deck(seed=seed)
@@ -131,8 +135,6 @@ class Card:
         else:
             raise NotImplementedError
 
-
-
     def get_value(self):
         # Return the value of the card (face cards 10, ace 1, others as int)
         return value_map.get(self.rank.lower(), int(self.rank) if self.rank.isdigit() else None)
@@ -147,6 +149,7 @@ class Card:
         return hash(self.tupl)
     
     def to_index(self) -> int:
-        suit_indices = {suit: idx for idx, suit in enumerate(Deck.SUITS)}
-        rank_indices = {rank: idx for idx, rank in enumerate(Deck.RANKS)}
-        return suit_indices[self.suit['name']] * 13 + rank_indices[self.rank['name']]
+        return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]
+
+RANK_TO_I = {r:i for i,r in enumerate(Deck.RANKS)}
+SUIT_TO_I = {s:i for i,s in enumerate(Deck.SUITS)}

@@ -5,7 +5,10 @@ from cribbage.playingcards import Card, Deck
 from cribbage.player import RandomPlayer
 
 def make_card(rank: str, suit: str) -> Card:
-    return Card(rank=Deck.RANKS[rank], suit=Deck.SUITS[suit])
+    # Accepts rank and suit as names, e.g., ("five", "spades")
+    rank_map = {'ace': 'a', 'two': '2', 'three': '3', 'four': '4', 'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10', 'jack': 'j', 'queen': 'q', 'king': 'k'}
+    suit_map = {'hearts': 'h', 'diamonds': 'd', 'clubs': 'c', 'spades': 's'}
+    return Card(f"{rank_map[rank]}{suit_map[suit]}")
 
 def make_round() -> CribbageRound:
     game = CribbageGame(players=[RandomPlayer("player1"), RandomPlayer("player2")])

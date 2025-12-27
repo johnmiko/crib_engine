@@ -46,7 +46,7 @@ class TestCribbageRound():
         round.table = []
         total = round.get_table_value(0)
         assert total == 0
-        round.table = [Card(Deck.RANKS['seven'], Deck.SUITS['hearts'])]
+        round.table = [Card('7h')]
         total = round.get_table_value(0)
         assert total == 7
 

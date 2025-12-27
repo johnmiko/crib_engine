@@ -23,9 +23,9 @@ class HasPairTripleQuad(ScoreCondition):
         if len(cards) > 1:
             last = cards[-4:][::-1]
             while same == 0 and last:
-                if all(card.rank['name'] == last[0].rank['name'] for card in last):
+                if all(card.rank == last[0].rank for card in last):
                     same = len(last)
-                    pair_rank = last[0].rank['symbol']
+                    pair_rank = last[0].rank
                 last.pop()
             if same == 2:
                 score = 2
@@ -48,7 +48,7 @@ class HasPairs_InHand(ScoreCondition):
         # Count cards of each rank
         rank_counts = {}
         for card in cards:
-            rank_name = card.rank['name']
+            rank_name = card.rank
             rank_counts[rank_name] = rank_counts.get(rank_name, 0) + 1
         
         # Calculate score based on pairs
@@ -57,16 +57,13 @@ class HasPairs_InHand(ScoreCondition):
         for rank_name, count in rank_counts.items():
             if count == 2:
                 score += 2
-                rank_symbol = next(card.rank['symbol'] for card in cards if card.rank['name'] == rank_name)
-                descriptions.append(f"Pair ({rank_symbol})")
+                descriptions.append(f"Pair ({rank_name})")
             elif count == 3:
                 score += 6  # 3 pairs from 3 cards
-                rank_symbol = next(card.rank['symbol'] for card in cards if card.rank['name'] == rank_name)
-                descriptions.append(f"Pair Royal ({rank_symbol})")
+                descriptions.append(f"Pair Royal ({rank_name})")
             elif count == 4:
                 score += 12  # 6 pairs from 4 cards
-                rank_symbol = next(card.rank['symbol'] for card in cards if card.rank['name'] == rank_name)
-                descriptions.append(f"Double Pair Royal ({rank_symbol})")
+                descriptions.append(f"Double Pair Royal ({rank_name})")
         
         description = ", ".join(descriptions) if descriptions else ""
         return score, description
@@ -97,10 +94,10 @@ class HasStraight_InHand(ScoreCondition):
         straights = []
         straights_deduped = []
         if cards:
-            for i in range(3,len(cards)+1):
+            for i in range(3, len(cards) + 1):
                 potential_straights += list(combinations(cards, i))
             for p in potential_straights:
-                rank_set = set([card.rank['rank'] for card in p])
+                rank_set = set([int(card.rank) if card.rank.isdigit() else {'a':1,'j':11,'q':12,'k':13}[card.rank.lower()] for card in p])
                 if ((max(rank_set) - min(rank_set) + 1) == len(p) == len(rank_set)):
                     straights.append(set(p))
             for s in straights:
@@ -128,7 +125,7 @@ class HasStraight_DuringPlay(ScoreCondition):
 
     @staticmethod
     def _is_straight(cards):
-        rank_set = set([card.rank['rank'] for card in cards])
+        rank_set = set([int(card.rank) if card.rank.isdigit() else {'a':1,'j':11,'q':12,'k':13}[card.rank.lower()] for card in cards])
         return ((max(rank_set) - min(rank_set) + 1) == len(cards) == len(rank_set)) if len(cards) > 2 else False
 
     @classmethod
@@ -170,7 +167,7 @@ class HasFlush(ScoreCondition):
             return 0, ""
 
         score = 0
-        suits = [card.get_suit() for card in cards]
+        suits = [card.suit for card in cards]
 
         if self.is_crib:
             # Crib flush only scores when all five match (hand + starter)

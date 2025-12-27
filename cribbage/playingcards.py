@@ -77,12 +77,16 @@ def build_hand(card_str_list: List[str]):
 
 class Card:
     def __init__(self, rank_and_suit):
-        self.rank = rank_and_suit[0]
+        # Support both single and double character ranks (e.g., '10h')
+        if len(rank_and_suit) == 3:
+            self.rank = rank_and_suit[:2]
+            self.suit = rank_and_suit[2]
+        else:
+            self.rank = rank_and_suit[0]
+            self.suit = rank_and_suit[1]
         if self.rank not in rank_name_map:
             raise ValueError("Card is created with rank then suit, passed in suit first")
-        self.suit = rank_and_suit[1]
-        # Need the if statement or else int(self.rank) fails on face cards
-        self.value = value_map.get(self.rank.lower(),int(self.rank) if self.rank.isdigit() else None)
+        self.value = value_map.get(self.rank.lower(), int(self.rank) if self.rank.isdigit() else None)
         self.tupl = (self.rank, self.suit)
     
     def __add__(self, other):
@@ -130,15 +134,14 @@ class Card:
 
 
     def get_value(self):
-        print(self)
-        print(self.rank)
-        return self.rank['value']
+        # Return the value of the card (face cards 10, ace 1, others as int)
+        return value_map.get(self.rank.lower(), int(self.rank) if self.rank.isdigit() else None)
 
     def get_suit(self):
-        return self.suit['name']
+        return self.suit
 
     def get_rank(self):
-        return self.rank['name']
+        return self.rank
 
     def __hash__(self):
         return hash(self.tupl)

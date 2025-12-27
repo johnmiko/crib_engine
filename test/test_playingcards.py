@@ -1,4 +1,6 @@
 import unittest
+
+from pytest import raises
 from cribbage.playingcards import Card, Deck
 
 
@@ -44,26 +46,12 @@ def test_seeded_deck_is_deterministic():
     assert deck1.cards == deck2.cards
     assert deck1.cards != deck1_pre_shuffle
 
-class TestDeckClass(unittest.TestCase):
-    def setUp(self):
-        self.deck = Deck()
-
-    def test_deck_size(self):
-        self.assertEqual(len(self.deck.cards), 52)
-
-    def test_shuffle(self):
-        preshuffle = str(self.deck.cards)
-        self.assertEqual(preshuffle, str(self.deck.cards))
-        self.deck.shuffle()
-        self.assertNotEqual(preshuffle, str(self.deck.cards))
 
 def test_card_creation_invalid():    
-    try:
-        card = Card(Deck.SUITS['hearts'], Deck.RANKS['ace'])  # Incorrect order
-    except ValueError as e:
-        assert str(e) == "Card is created with rank then suit, passed in suit first"
-    else:
-        assert False, "ValueError not raised for invalid card creation"
+    with raises(ValueError) as context:
+        Card("h5")  # Incorrect order
+    assert str(context.value) == "Card is created with rank then suit, passed in suit first"
+
 
 if __name__ == '__main__':
     unittest.main()

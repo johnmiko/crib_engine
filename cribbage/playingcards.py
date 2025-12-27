@@ -78,6 +78,8 @@ def build_hand(card_str_list: List[str]):
 class Card:
     def __init__(self, rank_and_suit):
         self.rank = rank_and_suit[0]
+        if self.rank not in rank_name_map:
+            raise ValueError("Card is created with rank then suit, passed in suit first")
         self.suit = rank_and_suit[1]
         # Need the if statement or else int(self.rank) fails on face cards
         self.value = value_map.get(self.rank.lower(),int(self.rank) if self.rank.isdigit() else None)

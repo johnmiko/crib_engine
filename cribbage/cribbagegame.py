@@ -197,9 +197,10 @@ class CribbageRound:
                     print("Player %s's hand: %s" % (p, self.hands[p]))
                     logger.info(f"{self.table}")
                     print(f"table is {self.table}")
+                    count = self.get_table_value(sequence_start_idx) 
                     card = p.select_card_to_play(hand=self.hands[p], table=self.table[sequence_start_idx:],
-                                                 crib=self.crib, count=self.get_table_value(sequence_start_idx))
-                    if card.get_value() + self.get_table_value(sequence_start_idx) > 31 or card is None:
+                                                 crib=self.crib, count=count)
+                    if card is None or card.get_value() + count > 31:
                         print("Player %s chooses go." % str(p))
                         loser = loser if loser else p
                         active_players.remove(p)

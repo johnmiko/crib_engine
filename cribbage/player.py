@@ -36,15 +36,6 @@ class Player(metaclass=ABCMeta):
         raise NotImplementedError
 
 
-class RandomPlayer(Player):
-    """A player that makes random decisions."""
-
-    def select_crib_cards(self, hand, dealer_is_self):
-        return random.sample(hand, 2)
-
-    def select_card_to_play(self, hand, table, crib):
-        return random.choice(hand)
-
 
 class HumanPlayer(Player):
     """Interface for a human user to play."""

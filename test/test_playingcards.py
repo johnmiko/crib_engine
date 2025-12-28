@@ -32,6 +32,9 @@ def test_default_deck_is_random():
     deck1 = Deck()
     deck2 = Deck()
     assert deck1.cards != deck2.cards
+    deck1 = Deck(seed=42)
+    deck2 = Deck(seed=43)
+    assert deck1.cards != deck2.cards
 
 def test_seeded_deck_is_deterministic():
     deck1 = Deck(seed=42)

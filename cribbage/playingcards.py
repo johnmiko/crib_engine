@@ -93,6 +93,9 @@ class Card:
         self.value = value_map.get(self.rank.lower(), int(self.rank) if self.rank.isdigit() else None)
         self.tupl = (self.rank, self.suit)
     
+    def __hash__(self):
+        return hash(self.tupl)
+
     def __add__(self, other):
         if isinstance(other, Card):
             return self.value + other.value # type: ignore        
@@ -132,8 +135,7 @@ class Card:
             )
         elif type(other) == int:
             return self.value == other
-        else:
-            raise NotImplementedError
+        return NotImplemented
 
     def get_value(self):
         # Return the value of the card (face cards 10, ace 1, others as int)
@@ -144,9 +146,6 @@ class Card:
 
     def get_rank(self):
         return self.rank
-
-    def __hash__(self):
-        return hash(self.tupl)
     
     def to_index(self) -> int:
         return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]

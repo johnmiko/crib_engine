@@ -2,8 +2,12 @@
 
 import random
 import logging
+
+from cribbage.board import CribbageBoard
+from cribbage.state import GameState, RoundState
 from . import scoring
-from .player import HumanPlayer, RandomPlayer
+from .player import HumanPlayer
+from .players.random_player import RandomPlayer
 from .playingcards import Deck
 
 logging.basicConfig(level=logging.INFO)
@@ -55,7 +59,9 @@ class CribbageGame:
     def __init__(self, players, seed: int | None = None):
         self.players = players  #: the two players
         self.board = CribbageBoard(self.players, self.MAX_SCORE)  #: the cribbage board for scoring
-        assert len(self.players) == 2, "Currently, only 2-player games are supported."
+        self.seed = seed
+        assert len(players) == 2, "Currently, only 2-player games are supported."
+        self.game_state = GameState(self.players, seed=seed)
 
     def _alternate_players(self, start_idx=0):
         """Generator to alternate which player dealers, with an arbitrary starting player.
@@ -75,25 +81,27 @@ class CribbageGame:
         :return: None
         """
         starting_player = random.choice([0, 1])
-        logger.info("Coin flip. %s is dealer." % str(self.players[starting_player]))
+        logger.debug("Coin flip. %s is dealer." % str(self.players[starting_player]))
         player_gen = self._alternate_players(starting_player)
         game_score = [0 for _ in self.players]
         while max(game_score) < self.MAX_SCORE:
             dealer = next(player_gen)
-            r = CribbageRound(self, dealer=dealer)
+            r = CribbageRound(self, dealer=dealer, seed=self.seed)
             r.play()
             game_score = [self.board.get_score(p) for p in self.players]
-            logger.info(f"{game_score=}")
-            debug(self.board)
+            logger.debug(f"{game_score=}")
+            logger.debug(self.board)
         return game_score # list of player 1's final peg vs player 2's final peg
 
 
 class CribbageRound:
     """Individual round of cribbage."""
 
-    def __init__(self, game, dealer):
+    # def __init__(self, game, dealer, seed: int | None = None):
+    def __init__(self, game, dealer, seed: int | None = None):
         # Replenish deck for each round
-        self.deck = Deck()
+        self._rng = random.Random(seed)
+        self.deck = Deck(seed=seed)
         self.game_winner = None
         self.game = game
         self.hands = {player: [] for player in self.game.players}
@@ -103,7 +111,8 @@ class CribbageRound:
         self.starter = None
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p != dealer][0]
-        self.most_recent_player = None
+        self.most_recent_player = None        
+        self.round_state = RoundState(self.game, dealer=dealer, seed=seed)
 
     def _deal(self):
         """Deal cards.
@@ -126,7 +135,7 @@ class CribbageRound:
         """        
         for p in self.game.players:
             cards_to_crib = p.select_crib_cards(self.hands[p], dealer_is_self=(p == self.dealer))
-            debug(f"Cards cribbed: {cards_to_crib}")
+            logger.debug(f"Cards cribbed: {cards_to_crib}")
             if not set(cards_to_crib).issubset(set(self.hands[p])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
             elif len(cards_to_crib) != 2:
@@ -136,6 +145,7 @@ class CribbageRound:
                 for card in cards_to_crib:
                     self.hands[p].remove(card)
                 self.player_hand_after_discard[p] = self.hands[p][:]
+                logger.info(f"Player {p} has hand {self.hands[p]} after cribbing.")
         assert len(self.crib) == self.game.CRIB_SIZE, "Crib size is not %s" % self.game.CRIB_SIZE
 
     def table_to_str(self, sequence_start_idx):
@@ -157,7 +167,7 @@ class CribbageRound:
 
     def _cut(self):
         """Cut the deck."""
-        cut_point = random.randrange(len(self.deck))
+        cut_point = self._rng.randrange(len(self.deck))
         self.deck.cut(cut_point=cut_point)
         logger.debug("Cards cut.")
 
@@ -179,9 +189,9 @@ class CribbageRound:
         self._populate_crib()
         self._cut()
         self.starter = self.deck.draw()
-        if self.starter.get_rank() == 'jack':
+        if self.starter.rank == 'j':
             self.game.board.peg(self.dealer, 1)
-            logger.info("2 points to %s for his heels." % str(self.dealer))
+            logger.debug("2 points to %s for his heels." % str(self.dealer))
         active_players = [self.nondealer, self.dealer]
         while sum([len(v) for v in self.hands.values()]) and self.game_winner is None:
             sequence_start_idx = len(self.table)
@@ -189,24 +199,25 @@ class CribbageRound:
                 for p in active_players:
                     logger.debug("Table: " + self.table_to_str(sequence_start_idx))
                     logger.debug("Player %s's hand: %s" % (p, self.hands[p]))
-                    logger.info(f"{self.table}")
+                    logger.debug(f"{self.table=}")
                     logger.debug(f"table is {self.table}")
                     count = self.get_table_value(sequence_start_idx) 
                     card = p.select_card_to_play(hand=self.hands[p], table=self.table[sequence_start_idx:],
                                                  crib=self.crib, count=count)
                     if card is None or card.get_value() + count > 31:
-                        logger.info("Player %s chooses go." % str(p))
+                        logger.debug("Player %s chooses go." % str(p))
                         loser = loser if loser else p
                         active_players.remove(p)
                         # If no one can play any more cards, give point to player of last card played
                     else:
                         # self.table.append({'player': p, 'card': card})
+                        logger.info("Player %s plays %s." % (str(p), str(card)))
                         self.table.append(card)
                         self.most_recent_player = p
                         self.hands[p].remove(card)
                         if not self.hands[p]:
                             active_players.remove(p)
-                        logger.info("Player %s plays %s for %d" %
+                        logger.debug("Player %s plays %s for %d" %
                                 (str(p), str(card), self.get_table_value(sequence_start_idx)))
                         # Consider cards played by both players when scoring during play
                         assert self.get_table_value(sequence_start_idx) <= 31, \
@@ -234,7 +245,7 @@ class CribbageRound:
                     self.game.board.peg(p, score)
 
             # Score the crib
-            logger.info("Scoring the crib: " + str(self.crib + [self.starter]))
+            logger.debug("Scoring the crib: " + str(self.crib + [self.starter]))
             score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)  # Include starter card as part of crib
             if score:
                 self.game.board.peg(self.dealer, score)
@@ -244,7 +255,7 @@ class CribbageRound:
         if len(active_players) == 0:
             player_of_last_card = self.most_recent_player
             self.game.board.peg(player_of_last_card, 1)
-            logger.info("Point to %s for last card played." % player_of_last_card)
+            logger.debug("Point to %s for last card played." % player_of_last_card)
             # Fix: mutate the list in place instead of reassigning
             new_players = [p for p in self.game.players if p != player_of_last_card and self.hands[p]]
             if self.hands[player_of_last_card]:
@@ -279,55 +290,9 @@ class CribbageRound:
         return score, breakdown
 
 
-class CribbageBoard:
-    """Board used to peg (track) points during a cribbage game."""
-
-    def __init__(self, players, max_score):
-        self.max_score = max_score
-        self.pegs = {p: {'front': 0, 'rear': 0} for p in players}
-
-    def __str__(self):
-        s = "[PEGS] "
-        for player in self.pegs.keys():
-            s += str(player) + " "
-            for peg in self.pegs[player]:
-                s += str(peg) + ": " + str(self.pegs[player][peg]) + ", "
-            s = s[:-2]
-            s += "; "
-        s = s[:-2]
-        return s
-
-    def __repr__(self):
-        return str(self)
-
-    def peg(self, player, points):
-        """Add points for a player.
-
-        :param player: Player who should receive points.
-        :param points: Number of points to add to the player.
-        :return: None
-        """
-        assert points > 0, "You must peg 1 or more points."
-        self.pegs[player]['rear'] = self.pegs[player]['front']
-        self.pegs[player]['front'] += points
-        if self.pegs[player]['front'] >= self.max_score:
-            self.pegs[player]['front'] = self.max_score
-            return player
-
-    def get_score(self, player):
-        """Return a given player's current score.
-
-        :param player: Player to check.
-        :return: Score for player.
-        """
-        front_peg = self.pegs[player]['front']
-        logger.debug(f"{front_peg=}")
-        return front_peg
-
 
 class IllegalCardChoiceError(Exception):
     """Raised when player client returns an invalid card selection."""
-
     pass
 
 

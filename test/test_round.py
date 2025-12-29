@@ -125,3 +125,33 @@ def test_cribbage_round_is_exactly_repeatable_with_random_player_and_set_seed():
     assert game1_score == [9, 2]
     assert game2_score == [9, 2]
     assert game1_score == game2_score, "Game scores should be the same for same seed"
+
+def test_cribbage_round_1_and_2_are_different_when_game_is_seeded():
+    # can't assign same player instances to different games otherwise their RNG state gets messed up
+    game1 = CribbageGame(players=[RandomPlayer(name="Random1", seed=42), RandomPlayer(name="Random2", seed=42)], seed=123)
+    round1 = CribbageRound(game=game1, dealer=game1.players[0], seed=game1._rng.randint(0, 2**32 - 1))        
+    round1.play()
+    logger.info(f"round1.table: {round1.table}")
+    round1_score = [game1.board.get_score(p) for p in game1.players]
+    round2 = CribbageRound(game=game1, dealer=game1.players[0],seed=game1._rng.randint(0, 2**32 - 1))
+    round2.play()
+    round2_score = [game1.board.get_score(p) for p in game1.players]
+    logger.info(f"round2.table: {round2.table}")
+    round1_hand_values = [hand for hand in round1.player_hand_after_discard.values()]
+    round2_hand_values = [hand for hand in round2.player_hand_after_discard.values()]
+    assert round1_hand_values == ([build_hand(["4c", "qd", "9c", "2s"]), build_hand(["jc", "3d", "7s", "qs"])])
+    assert round2_hand_values == ([build_hand(["6d", "7h", "ah", "kd"]), build_hand(["9h", "8c", "4h", "5d"])])
+    assert round1_hand_values != round2_hand_values    
+    assert round1_score == [10, 1]
+    assert round2_score == [18, 2]
+    for round1_player_score, round2_player_score in zip(round1_score, round2_score):
+        assert round2_player_score > round1_player_score
+
+def test_play_round_works_as_expected():
+    # can't assign same player instances to different games otherwise their RNG state gets messed up
+    game1 = CribbageGame(players=[RandomPlayer(name="Random1", seed=42), RandomPlayer(name="Random2", seed=42)], seed=123)        
+    game1.play_round()
+    logger.info(f"game1.round_scores after round 1: {game1.round_scores}")    
+    assert game1.round_scores == [[10, 6]]
+    game1.play_round()
+    assert game1.round_scores == [[10, 6], [14, 13]]

@@ -148,7 +148,6 @@ def test_cribbage_round_1_and_2_are_different_when_game_is_seeded():
         assert round2_player_score > round1_player_score
 
 def test_play_round_works_as_expected():
-    # can't assign same player instances to different games otherwise their RNG state gets messed up
     game1 = CribbageGame(players=[RandomPlayer(name="Random1", seed=42), RandomPlayer(name="Random2", seed=42)], seed=123)        
     game1.play_round()
     logger.info(f"game1.round_scores after round 1: {game1.round_scores}")    

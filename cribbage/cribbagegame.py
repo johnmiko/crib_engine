@@ -33,15 +33,17 @@ def score_play(card_seq):
             logger.debug("[SCORE] " + desc)
     return score
 
-def score_hand(cards, is_crib: bool = False):
+def score_hand(cards, is_crib: bool = False, starter_card=None):
     """Score a hand at the end of a round.
 
     :param cards: Cards in a single player's hand.
     :return: Points earned by player.
     """
     score = 0
-    score_scenarios = [scoring.CountCombinationsEqualToN(n=15),
-                        scoring.HasPairs_InHand(), scoring.HasStraight_InHand(), scoring.HasFlush(is_crib=is_crib)]
+    if starter_card is None and len(cards) == 5:
+        starter_card = cards[-1]
+    score_scenarios = [scoring.CountCombinationsEqualToN(n=15), scoring.JackMatchStarterSuitScorer(),
+                        scoring.HasPairs_InHand(), scoring.HasStraight_InHand(), scoring.HasFlush(is_crib=is_crib, starter_card=starter_card)]
     for scenario in score_scenarios:
         s, desc = scenario.check(cards[:])
         score += s

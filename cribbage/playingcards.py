@@ -112,17 +112,17 @@ class Card:
 
     def __lt__(self, other):
         if type(other) == Card:
-            return self.rank['value'] < other.rank['value']
+            return self.value < other.value
         elif type(other) == int:
-            return self.rank['value'] < other
+            return self.value < other
         else:
             raise NotImplementedError
 
     def __gt__(self, other):
         if type(other) == Card:
-            return self.rank['value'] > other.rank['value']
+            return self.value > other.value
         elif type(other) == int:
-            return self.rank['value'] > other
+            return self.value > other
         else:
             raise NotImplementedError
 

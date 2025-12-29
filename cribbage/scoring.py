@@ -1,8 +1,9 @@
 """Cribbage score conditions used during and after rounds."""
+from calendar import c
 from itertools import combinations
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
-
+from logging import getLogger
+logger = getLogger(__name__)
 
 class ScoreCondition(metaclass=ABCMeta):
     """Abstract Base Class"""
@@ -14,6 +15,19 @@ class ScoreCondition(metaclass=ABCMeta):
     def check(self, hand):
         raise NotImplementedError
 
+class JackMatchStarterSuitScorer(ScoreCondition):
+    """
+    Awards 1 point if there is a jack in the hand and its suit matches the starter card's suit.
+    """    
+    def check(self, hand_and_starter):
+        starter = hand_and_starter[-1]  # assuming last card is the starter
+        hand = hand_and_starter[:-1]
+        
+        starter_suit = starter.suit
+        for card in hand:
+            if card.rank.lower() == 'j' and card.suit == starter_suit:                
+                return 1, "Jack match starter suit"
+        return 0, "" 
 
 class HasPairTripleQuad(ScoreCondition):
     def check(self, cards):
@@ -158,34 +172,38 @@ class CountCombinationsEqualToN(ScoreCondition):
 
 
 class HasFlush(ScoreCondition):
-    def __init__(self, is_crib: bool = False):
+    def __init__(self, is_crib: bool = False, starter_card=None):
         super().__init__()
         self.is_crib = is_crib
+        self.starter_card = starter_card
 
     def check(self, cards):
         if len(cards) < 4:
             return 0, ""
 
         score = 0
+        # include to catch user error of function
+        if self.starter_card in cards:
+            # Exclude starter for flush check
+            cards = [c for c in cards if c != self.starter_card]
+        elif len(cards) == 5 and self.starter_card is None:
+            # Assume last card is starter if not provided
+            self.starter_card = cards[-1]
+            cards = cards[:-1]
+        elif self.is_crib and len(cards) == 4 and self.starter_card is None:
+            raise ValueError("Starter card must be provided for crib flush check with 4 hand cards.")
         suits = [card.suit for card in cards]
-
         if self.is_crib:
             # Crib flush only scores when all five match (hand + starter)
-            if len(cards) == 5 and len(set(suits)) == 1:
+            if len(cards) != 4 or self.starter_card is None:
+                raise ValueError("Crib flush check requires exactly 4 hand cards and a starter card.")
+            if len(set(suits + [self.starter_card.suit])) == 1:
                 score = 5
         else:
-            # Standard hand flush: 4 for four-card flush; +1 if starter also matches when present
-            if len(cards) == 5:
-                hand_suits = suits[:-1]
-                starter_suit = suits[-1]
+            # Standard hand flush: 4 for four-card flush; +1 if starter also matches when present            
+                hand_suits = suits
+                starter_suit = self.starter_card.suit
                 if len(set(hand_suits)) == 1:
-                    score = 4 + (1 if starter_suit == hand_suits[0] else 0)
-            # Fallback: count cards matching the suit of the latest card (legacy behavior)
-            if score == 0:
-                target_suit = suits[-1]
-                suit_count = suits.count(target_suit)
-                score = suit_count if suit_count >= 4 else 0
-
-        assert score < 6, "Flush score exceeded 5"
+                    score = 4 + (1 if starter_suit == hand_suits[0] else 0)        
         description = "" if score == 0 else ("%d-card flush" % score)
         return score, description

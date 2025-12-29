@@ -1,8 +1,8 @@
 import pytest
 
-from cribbage.cribbagegame import CribbageGame, CribbageRound
+from cribbage.cribbagegame import CribbageGame, CribbageRound, score_hand
 from cribbage.players.random_player import RandomPlayer
-from cribbage.playingcards import Card, Deck
+from cribbage.playingcards import Card, Deck, build_hand
 
 def make_card(rank: str, suit: str) -> Card:
     # Accepts rank and suit as names, e.g., ("five", "spades")
@@ -25,22 +25,29 @@ def make_flush_cards(starter_suit: str):
     ]
 
 def test_hand_flush_scores_four_without_starter_match():
-    round_inst = make_round()
-    cards = make_flush_cards(starter_suit="clubs")
-    score = round_inst._score_hand(cards, is_crib=False)
+    hand = build_hand(["3h", "8h", "9h", "qh", "kc"])
+    score = score_hand(hand, is_crib=False)
     assert score == 4
 
 def test_hand_flush_scores_five_with_starter_match():
-    round_inst = make_round()
-    cards = make_flush_cards(starter_suit="hearts")
-    score = round_inst._score_hand(cards, is_crib=False)
+    hand = build_hand(["3h", "8h", "9h", "qh", "kh"])
+    score = score_hand(hand, is_crib=False)
     assert score == 5
 
-def test_crib_flush_requires_all_five_cards_match():
-    round_inst = make_round()
-    non_matching = make_flush_cards(starter_suit="clubs")
-    matching = make_flush_cards(starter_suit="hearts")
-    no_flush_score = round_inst._score_hand(non_matching, is_crib=True)
-    flush_score = round_inst._score_hand(matching, is_crib=True)
-    assert no_flush_score == 0
-    assert flush_score == 5
+def test_crib_flush_no_starter_is_0():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh", "kc"]), is_crib=True)
+    assert score == 0
+
+def test_crib_flush_with_starter_is_5():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh", "kh"]), is_crib=True)
+    assert score == 5
+
+def test_explicit_starter_card_is_handled_correctly():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=True, starter_card=Card("kh"))
+    assert score == 5
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=True, starter_card=Card("kc"))
+    assert score == 0
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=False, starter_card=Card("kc"))
+    assert score == 4
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=False, starter_card=Card("kh"))
+    assert score == 5

@@ -7,7 +7,7 @@ class CribbageBoard:
 
     def __init__(self, players, max_score):
         self.max_score = max_score
-        self.pegs = {p: {'front': 0, 'rear': 0} for p in players}
+        self.pegs = {p.name: {'front': 0, 'rear': 0} for p in players}
 
     def __str__(self):
         s = "[PEGS] "
@@ -31,10 +31,10 @@ class CribbageBoard:
         :return: None
         """
         assert points > 0, "You must peg 1 or more points."
-        self.pegs[player]['rear'] = self.pegs[player]['front']
-        self.pegs[player]['front'] += points
-        if self.pegs[player]['front'] >= self.max_score:
-            self.pegs[player]['front'] = self.max_score
+        self.pegs[player.name]['rear'] = self.pegs[player.name]['front']
+        self.pegs[player.name]['front'] += points
+        if self.pegs[player.name]['front'] >= self.max_score:
+            self.pegs[player.name]['front'] = self.max_score
             return player
 
     def get_score(self, player):

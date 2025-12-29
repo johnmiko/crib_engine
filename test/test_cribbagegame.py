@@ -24,6 +24,14 @@ class TestCribbageBoard(unittest.TestCase):
         self.assertEqual(self.board.pegs[self.players[0]]['front'], 105)
         self.assertEqual(self.board.pegs[self.players[0]]['rear'], 100)
 
+def test_cribbage_game_is_exactly_repeatable():
+    p0 = PlayFirstCardPlayer(name="Player1")
+    p1 = PlayFirstCardPlayer(name="Player2")
+    game1 = cribbagegame.CribbageGame(players=[p0, p1], seed=123)
+    peg_dif1 = game1.start()
+    game2 = cribbagegame.CribbageGame(players=[p0, p1], seed=123)
+    peg_dif2 = game2.start()
+    assert peg_dif1 == peg_dif2
 
 
 if __name__ == '__main__':

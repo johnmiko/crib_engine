@@ -1,8 +1,8 @@
 import pytest
 
 from cribbage.cribbagegame import CribbageGame, CribbageRound
+from cribbage.players.random_player import RandomPlayer
 from cribbage.playingcards import Card, Deck
-from cribbage.player import RandomPlayer
 
 def make_card(rank: str, suit: str) -> Card:
     # Accepts rank and suit as names, e.g., ("five", "spades")

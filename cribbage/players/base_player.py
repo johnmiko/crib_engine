@@ -3,7 +3,7 @@ import random
 from abc import ABCMeta, abstractmethod
 
 
-class Player(metaclass=ABCMeta):
+class BasePlayer(metaclass=ABCMeta):
     """Abstract Base Class"""
 
     def __init__(self, name):
@@ -37,7 +37,7 @@ class Player(metaclass=ABCMeta):
 
 
 
-class HumanPlayer(Player):
+class HumanPlayer(BasePlayer):
     """Interface for a human user to play."""
 
     def present_cards_for_selection(self, cards, n_cards=1):

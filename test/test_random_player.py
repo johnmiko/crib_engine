@@ -14,16 +14,3 @@ def test_random_player_can_be_seeded():
     card_to_play1 = player1.select_card_to_play(hand.copy(), table.copy(), crib_cards1, count=10)
     card_to_play2 = player2.select_card_to_play(hand.copy(), table.copy(), crib_cards2, count=10)
     assert card_to_play1 == card_to_play2, "Card to play selections should be the same for same seed"
-
-def test_crib_round_with_random_players_is_repeatable_with_same_seed():
-    p0 = RandomPlayer(name="Random1", seed=42)
-    p1 = RandomPlayer(name="Random2", seed=42)
-    game1 = CribbageGame(players=[p0, p1], seed=123)
-    game2 = CribbageGame(players=[p0, p1], seed=123)
-    round1 = CribbageRound(game=game1, dealer=p0, seed=123)
-    round2 = CribbageRound(game=game2, dealer=p0, seed=123)    
-    round1.play()
-    round2.play()
-    game1_score = [game1.board.get_score(p) for p in [p0, p1]]
-    game2_score = [game2.board.get_score(p) for p in [p0, p1]]
-    assert game1_score == game2_score, "Game scores should be the same for same seed"

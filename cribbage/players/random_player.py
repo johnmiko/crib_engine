@@ -1,14 +1,19 @@
 from typing import List, Tuple, Optional
 import random
 from logging import getLogger
+from cribbage.players.base_player import BasePlayer
 from cribbage.playingcards import Card
 
 logger = getLogger(__name__)
 
-class RandomPlayer:
+class RandomPlayer(BasePlayer):
     def __init__(self, name: str = "random", seed: int | None = None):
         self.name = name
+        self.seed = seed
         self._rng = random.Random(seed)
+    
+    def reset_rng(self):
+        self._rng = random.Random(self.seed)
 
     def select_crib_cards(self, hand: List[Card], dealer_is_self: bool) -> Tuple[Card, Card]:
         return tuple(self._rng.sample(hand, 2))  # type: ignore

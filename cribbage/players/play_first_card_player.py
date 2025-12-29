@@ -1,11 +1,12 @@
 from typing import List, Tuple, Optional
 import random
 from logging import getLogger
+from cribbage.players.base_player import BasePlayer
 from cribbage.playingcards import Card
 
 logger = getLogger(__name__)
 
-class PlayFirstCardPlayer:
+class PlayFirstCardPlayer(BasePlayer):
     def __init__(self, name: str = "play first card", seed: int | None = None):
         self.name = name
 

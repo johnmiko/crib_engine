@@ -1,5 +1,6 @@
 from typing import List, Tuple, Optional
 from logging import getLogger
+from cribbage.players.base_player import BasePlayer
 from cribbage.playingcards import Card
 from cribbage.cribbagegame import score_hand, score_play as score_pegging_play
 from cribbage.playingcards import Deck
@@ -70,7 +71,7 @@ def basic_crib_strategy(hand: List[Card], dealer_is_self: bool) -> Tuple[Card, C
     return best_discards[0]  # type: ignore
 
 
-class BeginnerPlayer:
+class BeginnerPlayer(BasePlayer):
     def __init__(self, name: str = "beginner"):
         self.name = name
 

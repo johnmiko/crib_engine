@@ -15,14 +15,14 @@ class TestCribbageBoard(unittest.TestCase):
 
     def test_peg(self):
         self.board.peg(self.players[0], 100)
-        self.assertEqual(self.board.pegs[self.players[0]]['front'], 100)
-        self.assertEqual(self.board.pegs[self.players[0]]['rear'], 0)
+        self.assertEqual(self.board.pegs[self.players[0].name]['front'], 100)
+        self.assertEqual(self.board.pegs[self.players[0].name]['rear'], 0)
 
     def test_peg_leapfrog(self):
         self.board.peg(self.players[0], 100)
         self.board.peg(self.players[0], 5)
-        self.assertEqual(self.board.pegs[self.players[0]]['front'], 105)
-        self.assertEqual(self.board.pegs[self.players[0]]['rear'], 100)
+        self.assertEqual(self.board.pegs[self.players[0].name]['front'], 105)
+        self.assertEqual(self.board.pegs[self.players[0].name]['rear'], 100)
 
 def test_cribbage_game_is_exactly_repeatable():
     p0 = PlayFirstCardPlayer(name="Player1")

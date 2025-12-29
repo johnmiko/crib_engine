@@ -23,7 +23,7 @@ class RoundState:
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p != dealer][0]
         self.most_recent_player = None
-    
+ 
 
 class GameState:
     """Manages the state of a single cribbage game."""
@@ -42,6 +42,7 @@ class GameState:
         assert len(players) == 2, "Currently, only 2-player games are supported."
         # self.game_state = GameState(self.players, seed=seed)
         self.rounds = []
+        rounds = []
         
         # Player hands
         # self.human_hand: List[Card] = []

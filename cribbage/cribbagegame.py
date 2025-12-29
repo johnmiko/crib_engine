@@ -65,6 +65,8 @@ class CribbageGame:
         self.players_dict = {self.players[0].name: self.players[0], self.players[1].name: self.players[1]}
         self.board = CribbageBoard(self.players, self.MAX_SCORE)  #: the cribbage board for scoring
         self.seed = seed
+        self._rng = random.Random(seed)    
+        # self._rng = random.Random(self.seed)
         assert len(players) == 2, "Currently, only 2-player games are supported."
         for p in self.players:
             if isinstance(p, RandomPlayer):
@@ -88,7 +90,7 @@ class CribbageGame:
 
         :return: None
         """
-        starting_player = random.choice([0, 1])
+        starting_player = self._rng.choice([0, 1])
         logger.debug("Coin flip. %s is dealer." % str(self.players[starting_player]))
         player_gen = self._alternate_players(starting_player)
         game_score = [0 for _ in self.players]
@@ -108,7 +110,7 @@ class CribbageRound:
     # def __init__(self, game, dealer, seed: int | None = None):
     def __init__(self, game, dealer, seed: int | None = None):
         # Replenish deck for each round
-        self._rng = random.Random(seed)
+        self._rng_round = random.Random(seed)
         self.deck = Deck(seed=seed)
         self.game_winner = None
         self.game = game
@@ -177,7 +179,7 @@ class CribbageRound:
 
     def _cut(self):
         """Cut the deck."""
-        cut_point = self._rng.randrange(len(self.deck))
+        cut_point = self._rng_round.randrange(len(self.deck))
         self.deck.cut(cut_point=cut_point)
         logger.debug("Cards cut.")
 

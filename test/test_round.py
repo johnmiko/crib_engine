@@ -58,7 +58,7 @@ def test_cribbage_round_attributes_are_the_same_with_set_seed():
     assert [hand for hand in round1.player_hand_after_discard.values()] == [hand for hand in round2.player_hand_after_discard.values()], "Player hands after discard should be the same for same seed"
     game1_score = [game1.board.get_score(p) for p in [p0, p1]]
     game2_score = [game2.board.get_score(p) for p in [p0, p1]]
-    logger.info(f"Game1 score: {game1_score}, Game2 score: {game2_score}")
+    logger.debug(f"Game1 score: {game1_score}, Game2 score: {game2_score}")
     assert game1_score == [11, 9]
     assert game2_score == [11, 9]
     assert game1_score == game2_score, "Game scores should be the same for same seed"

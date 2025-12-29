@@ -157,7 +157,7 @@ class CribbageRound:
                 for card in cards_to_crib:
                     self.hands[pi].remove(card)
                 self.player_hand_after_discard[pi] = self.hands[pi][:]
-                logger.info(f"Player {player.name} has hand {self.hands[pi]} after cribbing.")
+                logger.debug(f"Player {player.name} has hand {self.hands[pi]} after cribbing.")
         assert len(self.crib) == self.game.CRIB_SIZE, "Crib size is not %s" % self.game.CRIB_SIZE
 
     def table_to_str(self, sequence_start_idx):
@@ -205,7 +205,7 @@ class CribbageRound:
         """Start cribbage round."""
         loser = None
         self.set_up_round_and_deal_cards()
-        logger.info("Starter card is %s." % str(self.starter))
+        logger.debug("Starter card is %s." % str(self.starter))
         if self.starter.rank == 'j':
             self.game.board.peg(self.dealer, 1)
             logger.debug("2 points to %s for his heels." % str(self.dealer))
@@ -213,10 +213,10 @@ class CribbageRound:
         while sum([len(v) for v in self.hands.values()]) and self.game_winner is None:
             sequence_start_idx = len(self.table)
             while active_players and self.game_winner is None:
-                logger.info(f"In while loop {len(active_players)}")
+                logger.debug(f"In while loop {len(active_players)}")
                 for player in active_players:
-                    logger.info(f"Player {player.name}'s turn to play.")
-                    logger.info(f"active table cards {self.table[sequence_start_idx:]}")
+                    logger.debug(f"Player {player.name}'s turn to play.")
+                    logger.debug(f"active table cards {self.table[sequence_start_idx:]}")
                     # logger.debug("Table: " + self.table_to_str(sequence_start_idx))
                     # logger.debug("Player %s's hand: %s" % (player, self.hands[player]))
                     # logger.debug(f"{self.table=}")
@@ -224,7 +224,7 @@ class CribbageRound:
                     count = self.get_table_value(sequence_start_idx) 
                     card = player.select_card_to_play(hand=self.hands[player.name], table=self.table[sequence_start_idx:],
                                                  crib=self.crib, count=count)
-                    logger.info(f"Player {player.name} selected card {card} with count {count}")
+                    logger.debug(f"Player {player.name} selected card {card} with count {count}")
                     if card is None or card.get_value() + count > 31:
                         logger.debug("Player %s chooses go." % str(player))
                         loser = loser if loser else player
@@ -232,7 +232,7 @@ class CribbageRound:
                         # If no one can play any more cards, give point to player of last card played
                     else:
                         # self.table.append({'player': p, 'card': card})
-                        # logger.info("Player %s plays %s." % (str(p), str(card)))
+                        # logger.debug("Player %s plays %s." % (str(p), str(card)))
                         self.table.append(card)
                         self.most_recent_player = player
                         self.hands[player.name].remove(card)
@@ -273,7 +273,7 @@ class CribbageRound:
 
     def go_or_31_reached(self, active_players):
         # If both players have reached 31 or "go" and not run out of cards, continue play
-        logger.info(f"In go or 31 {len(active_players)}")
+        logger.debug(f"In go or 31 {len(active_players)}")
         if not active_players:
             player_of_last_card = self.most_recent_player
             self.game.board.peg(player_of_last_card, 1)

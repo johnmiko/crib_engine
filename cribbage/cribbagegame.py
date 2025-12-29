@@ -133,7 +133,8 @@ class CribbageRound:
             self.deck.shuffle()
         for _ in range(cards_per_player):
             for key in self.hands.keys():
-                self.hands[key].append(self.deck.draw())
+                if len(self.hands[key]) < cards_per_player:
+                    self.hands[key].append(self.deck.draw())
         logger.debug("Cards dealt.")
 
     def _populate_crib(self):
@@ -213,6 +214,7 @@ class CribbageRound:
                 logger.info(f"In while loop {len(active_players)}")
                 for player in active_players:
                     logger.info(f"Player {player.name}'s turn to play.")
+                    logger.info(f"active table cards {self.table[sequence_start_idx:]}")
                     # logger.debug("Table: " + self.table_to_str(sequence_start_idx))
                     # logger.debug("Player %s's hand: %s" % (player, self.hands[player]))
                     # logger.debug(f"{self.table=}")
@@ -240,7 +242,7 @@ class CribbageRound:
                         assert self.get_table_value(sequence_start_idx) <= 31, \
                             "Value of cards on table must be <= 31 to be eligible for scoring."
                         # only scores the latest play, need to test
-                        sequence = self.table
+                        sequence = self.table[sequence_start_idx:]
                         score = self._score_play(sequence)
                         # score = self._score_play(card_seq=[move['card'] for move in self.table[sequence_start_idx:]])
                         if score:
@@ -255,9 +257,9 @@ class CribbageRound:
         # Score each player's hand
         if self.game_winner is None:
             for p in self.game.players:
-                p_cards_played = self.player_hand_after_discard[p] + [self.starter]
+                p_cards_played = self.player_hand_after_discard[p.name] + [self.starter]
                 # logger.debug("Scoring " + str(p) + "'s hand: " + str(p_cards_played))
-                score = self._score_hand(cards=self.player_hand_after_discard[p], is_crib=False)  # Include starter card as part of hand
+                score = self._score_hand(cards=self.player_hand_after_discard[p.name], is_crib=False)  # Include starter card as part of hand
                 if score:
                     self.game.board.peg(p, score)
 
@@ -275,8 +277,8 @@ class CribbageRound:
             self.game.board.peg(player_of_last_card, 1)
             logger.debug("Point to %s for last card played." % player_of_last_card)
             # Fix: mutate the list in place instead of reassigning
-            new_players = [p for p in self.game.players if p != player_of_last_card and self.hands[p]]
-            if self.hands[player_of_last_card]:
+            new_players = [p for p in self.game.players if p != player_of_last_card and self.hands[p.name]]
+            if self.hands[player_of_last_card.name]:
                 new_players.append(player_of_last_card)
             active_players.clear()
             active_players.extend(new_players)

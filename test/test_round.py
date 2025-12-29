@@ -69,10 +69,34 @@ def test_cribbage_round_is_exactly_repeatable_with_play_first_card_player_and_se
     round2.play()
     game1_score = [game1.board.get_score(p) for p in [p0, p1]]
     game2_score = [game2.board.get_score(p) for p in [p0, p1]]
-    assert game1_score == [21, 18]
-    assert game2_score == [21, 18]
+    assert game1_score == [11, 9]
+    assert game2_score == [11, 9]
     assert game1_score == game2_score, "Game scores should be the same for same seed"
 
+def test_cribbage_round_scores_and_pegs_are_correct():
+    p0 = PlayFirstCardPlayer(name="Player1")
+    p1 = PlayFirstCardPlayer(name="Player2")
+    game1 = CribbageGame(players=[p0, p1], seed=123)
+    round1 = CribbageRound(game=game1, dealer=p0, seed=123)
+    round1.hands = {
+        p0.name: build_hand(['ah','2h','5h', '5d', '5s', '5c']),
+        p1.name: build_hand(['3h','4h','jc', 'jd', 'jh', 'js'])
+    }
+    round1.play()
+    round1.starter = Card("qc")
+    game1_score = [game1.board.get_score(p) for p in [p0, p1]]
+    round1.table = build_hand(["jc", "5h", "jd", "5d", "5s", "jh", "5c", "js"])
+    round1.crib = build_hand(["ah", "2h", "3h", "4h"])
+    # player 2 will score 4 of a kind + 1 for jack suite match = 13
+    # player 1 will score 4 of a kind for 12, then + 8 because of starter, peg 15 2, 1 for the go, then 15 2. Then crib is  run of 4, no flush, 15 4
+    # player 1 total = 12 + 8 + 2 + 1 + 2 + 4 + 4 = 33
+    assert game1_score == [33, 13]
+
+def test_starter_is_jack_gets_1_point():
+    pass
+
+def test_peg_only_uses_active_table():
+    pass
 
 def test_cribbage_round_is_exactly_repeatable_with_random_player_and_set_seed():
     # can't assign same player instances to different games otherwise their RNG state gets messed up

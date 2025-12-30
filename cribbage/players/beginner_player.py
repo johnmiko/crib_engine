@@ -1,5 +1,5 @@
 from cribbage.players.base_player import BasePlayer
-from cribbage.scoring_old import score_play
+from cribbage.scoring import score_play
 
 
 def basic_pegging_strategy(playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:

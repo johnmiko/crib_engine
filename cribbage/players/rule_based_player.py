@@ -6,9 +6,6 @@ from cribbage.cribbagegame import score_hand, score_play as score_play
 from cribbage.playingcards import Deck
 from itertools import combinations
 
-from matplotlib.pylab import f
-from numpy import full
-
 logger = getLogger(__name__)
 
 
@@ -30,26 +27,6 @@ def get_possible_hands(hand: list[Card]) -> list[tuple[list[Card], list[Card]]]:
 
 
 
-class DifficultPlayer(BeginnerPlayer):
-    def __init__(self, name: str = "difficult"):
-        super().__init__(name=name)
-
-    def select_crib_cards(self, hand: List["Card"], dealer_is_self: bool) -> Tuple["Card", "Card"]:
-        """
-        Choose discard using expected value over:
-          - all possible starters for the kept hand
-          - all possible opponent discards + starters for the crib
-        """
-        assert len(hand) == 6
-        full_deck = get_full_deck()
-
-        best_discards: List[Tuple["Card", "Card"]] = []
-        best_score = float("-inf")
-
-        crib_ranges = generate_crib_ranges(hand)
-        hand_ranges = generate_hand_ranges(hand)
-
-        return best_discards[0]  # tie-break by first
 
 
 from itertools import combinations

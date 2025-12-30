@@ -178,10 +178,17 @@ class HasFlush(ScoreCondition):
         self.starter_card = starter_card
 
     def check(self, cards):
+        logger.debug("Checking flush for cards: %s", cards)
+        logger.debug("length of cards: %d", len(cards))
         if len(cards) < 4:
             return 0, ""
 
         score = 0
+        if len(cards) == 4:
+            suits = [card.suit for card in cards]
+            if len(set(suits)) == 1:
+                score = 4, "only 4 cards checked, but has flush"
+            return 0, ""
         # include to catch user error of function
         if self.starter_card in cards:
             # Exclude starter for flush check
@@ -202,6 +209,9 @@ class HasFlush(ScoreCondition):
         else:
             # Standard hand flush: 4 for four-card flush; +1 if starter also matches when present            
                 hand_suits = suits
+                if self.starter_card is None:
+                    a = 1 
+                    raise ValueError("starter card not passed in ", cards)
                 starter_suit = self.starter_card.suit
                 if len(set(hand_suits)) == 1:
                     score = 4 + (1 if starter_suit == hand_suits[0] else 0)        

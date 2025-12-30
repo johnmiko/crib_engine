@@ -2,6 +2,7 @@ import math
 import sqlite3
 import itertools
 import numpy as np
+import pandas as pd
 # You said this exists already:
 # from your_module import get_full_deck, score_hand
 # For example:
@@ -342,92 +343,19 @@ def get_remaining_cards(full_deck, dealt_hand):
     return list(set(full_deck) - set(dealt_hand))        
 
 
-# ---------------- crib stats ----------------
-def build_crib_stats(full_deck):
-    conn = sqlite3.connect(DB_PATH)
+def build_hand_stats_approx_table(hand_score_cache, full_deck, db_path=DB_PATH, batch_size=5000):
+
+    # doesn't account for the starter card not being in the 6 cards we were dealt
+    table_name = "hand_stats_approx"
+    conn = sqlite3.connect(db_path)
+    delete_table(table_name, conn)
+
     cur = conn.cursor()
-    setup_crib_stats_table(conn)
-
-    all_dealt_hands = itertools.combinations(full_deck, 6)
-    len_all_dealt_hands = len(list(all_dealt_hands))
-    for idx, dealt_hand in enumerate(all_dealt_hands, 1):
-        dealt_hand = list(dealt_hand)
-        remaining_cards = [c for c in full_deck if c not in dealt_hand]
-        my_discards = list(itertools.combinations(dealt_hand, 2))
-
-        crib_scores = []
-
-        for starter in remaining_cards:
-            remaining_for_opp = [c for c in remaining_cards if c != starter]
-            opponent_discards = itertools.combinations(remaining_for_opp, 2)
-
-            for my_discard in my_discards:
-                for opp_discard in opponent_discards:
-                    crib_hand = list(my_discard) + list(opp_discard) + [starter]
-                    crib_scores.append(score_hand(crib_hand, is_crib=True))
-
-        avg_crib = sum(crib_scores) / len(crib_scores)
-        hand_key = normalize_hand_to_str(dealt_hand)
-        cur.execute(
-            """
-            INSERT OR REPLACE INTO crib_stats
-            (hand_key, avg_crib)
-            VALUES (?, ?)
-            """,
-            (hand_key, avg_crib),
-        )
-
-        if idx % 100 == 0:
-            conn.commit()
-            print(f"Processed {idx} / {len_all_dealt_hands} dealt hands for crib...")
-
+    cur.execute("DROP TABLE IF EXISTS {}".format(table_name))
     conn.commit()
-    conn.close()
-    print("Done building crib stats.")
-
-import pandas as pd
-
-def build_kept_stats_pandas(hand_scores):
-    """
-    hand_scores: dict with keys = 5-card tuples, values = score
-    Computes min, max, average score for each 4-card kept hand.
-    """
-
-    # Convert to DataFrame
-    df = pd.DataFrame([
-        (*hand, score) for hand, score in hand_scores.items()
-    ], columns=["c1","c2","c3","c4","c5","score"])
-
-    # Sort cards in each hand to ensure consistency
-    df[["c1","c2","c3","c4","c5"]] = pd.DataFrame(
-        df[["c1","c2","c3","c4","c5"]].apply(lambda row: sorted(row), axis=1).tolist()
-    )
-
-    # Generate 4-card kept hands
-    def kept_keys(row):
-        return [tuple(sorted(k)) for k in itertools.combinations(row[["c1","c2","c3","c4","c5"]], 4)]
-
-    df["kept_keys"] = df.apply(kept_keys, axis=1)
-
-    # Explode so each row = 1 kept hand
-    df_exploded = df.explode("kept_keys")
-
-    # Group by kept hand key
-    kept_stats = df_exploded.groupby("kept_keys")["score"].agg(
-        min_score="min",
-        max_score="max",
-        avg_score="mean"
-    ).reset_index()
-
-    # Optional: round average
-    kept_stats["avg_score"] = kept_stats["avg_score"].round(2)
-
-    # Insert into SQLite
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
     cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS hand_stats_approx (
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
             hand_key TEXT PRIMARY KEY,
             min_score INTEGER,
             max_score INTEGER,
@@ -435,19 +363,45 @@ def build_kept_stats_pandas(hand_scores):
         )
         """
     )
-    # Convert tuple keys to string
-    kept_stats["hand_key"] = kept_stats["kept_keys"].apply(lambda x: "|".join(x))
-    cur.executemany(
-        """
-        INSERT OR REPLACE INTO hand_stats_approx 
-        (hand_key, min_score, max_score, avg_score)
-        VALUES (?, ?, ?, ?)
-        """,
-        kept_stats[["hand_key","min_score","max_score","avg_score"]].values.tolist()
-    )
-    conn.commit()
+
+    possible_hands = list(itertools.combinations(full_deck, 4))
+    df = pd.DataFrame(possible_hands, columns=["c1", "c2", "c3", "c4"])
+    df["hand_key"] = df.apply(lambda r: normalize_hand_to_str(r), axis=1)
+    len_df = len(df)
+    records = []
+    i = 0
+    for _, row in df.iterrows():
+        i += 1 
+        print(f"Processing hand {i} / {len_df}")
+        hand = [row.c1, row.c2, row.c3, row.c4]
+        remaining = [c for c in full_deck if c not in hand]
+        scores = []
+
+        # opponent contributes 2 cards + starter
+        for starter in remaining:            
+            five = normalize_hand_to_tuple(hand + [starter])
+            scores.append(hand_score_cache[five])
+
+        records.append({
+            "hand_key": row.hand_key,
+            "min_score": min(scores),
+            "max_score": max(scores),
+            "avg_score": round(sum(scores) / len(scores), 2)
+        })
+
+        if len(records) >= batch_size:
+            pd.DataFrame(records).to_sql(
+                table_name, conn, if_exists="append", index=False
+            )
+            records.clear()
+
+    if records:
+        pd.DataFrame(records).to_sql(
+            table_name, conn, if_exists="append", index=False
+        )
+
     conn.close()
-    print(f"Inserted {len(kept_stats)} 4-card kept hands into hand_stats_approx.")
+    print(f"Done building {table_name}")
 
 
 def build_exact_full_hand_stats_pandas(full_deck, hand_score_cache, db_path=DB_PATH, batch_size=5000):
@@ -514,6 +468,13 @@ def build_exact_full_hand_stats_pandas(full_deck, hand_score_cache, db_path=DB_P
     print("Done building exact full hand stats.")
 
 
+def delete_table(table_name, conn=None):
+    if conn is None:
+        db_path = DB_PATH
+        conn = sqlite3.connect(db_path)        
+    cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS {}".format(table_name))
+    conn.commit()
 
 def build_crib_stats_approx_table(
     full_deck,
@@ -521,12 +482,11 @@ def build_crib_stats_approx_table(
     db_path=DB_PATH,
     batch_size=5000,
 ):
-    import itertools
-    import sqlite3
-    import pandas as pd
     # doesn't account for the starter card not being in the 6 cards we were dealt
     table_name = "crib_stats_approx"
     conn = sqlite3.connect(db_path)
+    delete_table(table_name, conn)
+
     cur = conn.cursor()
     cur.execute("DROP TABLE IF EXISTS {}".format(table_name))
     conn.commit()
@@ -588,14 +548,15 @@ def build_crib_stats_approx_table(
 
 if __name__ == "__main__":
     full_deck = get_full_deck()
-    # done - build_5_card_hand_score_table(full_deck)
-    # done - hand_score_cache = load_all_5_card_scores(sqlite3.connect(DB_PATH))  # keys as sorted tuples    
-    # done - build_kept_stats_pandas(hand_score_cache)
+    # build_5_card_hand_score_table(full_deck) # done   
+    # build_kept_stats_pandas(hand_score_cache)# done
+    hand_score_cache = load_all_5_card_scores(sqlite3.connect(DB_PATH)) # done
+    build_hand_stats_approx_table(hand_score_cache, full_deck, db_path=DB_PATH)
     # done - build_exact_full_hand_stats_pandas(full_deck, hand_score_cache, db_path=DB_PATH, batch_size=5000)
 
 
-    # donebuild_5_card_crib_score_table(full_deck)    
-    crib_score_cache = load_all_5_card_crib_scores(sqlite3.connect(DB_PATH))  # keys as sorted tuples    
-    build_crib_stats_approx_table(full_deck, crib_score_cache, db_path=DB_PATH)
+    # build_5_card_crib_score_table(full_deck) # done
+    # crib_score_cache = load_all_5_card_crib_scores(sqlite3.connect(DB_PATH)) # done
+    # build_crib_stats_approx_table(full_deck, crib_score_cache, db_path=DB_PATH)
     # build_kept_stats_parallel(full_deck, hand_score_cache, n_workers=8)
     # build_crib_stats(full_deck)

@@ -1,6 +1,7 @@
 import pytest
 
-from cribbage.cribbagegame import CribbageGame, CribbageRound
+from cribbage.cribbagegame import CribbageGame
+from cribbage.cribbageround import CribbageRound
 from cribbage.players.random_player import RandomPlayer
 from cribbage.playingcards import Card, Deck
 

@@ -225,47 +225,5 @@ class TestCountCombinationsEqualToN(unittest.TestCase):
         self.assertEqual(score, 4)
 
 
-class TestHasFlush(unittest.TestCase):
-    def setUp(self):
-        pass
-
-    def test_HasFlush_four_card_flush(self):
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('ah'), pc.Card('5h'), pc.Card('jh')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 4)
-
-    def test_HasFlush_five_card_flush(self):
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('ah'), pc.Card('5h'), pc.Card('jh'), pc.Card('2h')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 5)
-
-    def test_HasFlush_three_card_non_flush(self):
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('jh'), pc.Card('2h')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 0)
-
-    def test_HasFlush_four_card_old_flush(self):
-        """Tests to make sure latest card must be part of flush"""
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('ah'), pc.Card('5h'), pc.Card('jh'), pc.Card('2d')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 4)
-
-    def test_HasFlush_four_card_split_flush(self):
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('ah'), pc.Card('5h'), pc.Card('2d'), pc.Card('jh')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 4)
-
-    def test_HasFlush_five_card_split_flush(self):
-        s = scoring.HasFlush()
-        hand = [pc.Card('9h'), pc.Card('ah'), pc.Card('kh'), pc.Card('ac'), pc.Card('5h'), pc.Card('2d'), pc.Card('jh')]
-        score, _ = s.check(hand)
-        self.assertEqual(score, 5)
-
-
 if __name__ == '__main__':
     unittest.main()

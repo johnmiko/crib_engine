@@ -207,3 +207,38 @@ class HasFlush(ScoreCondition):
                     score = 4 + (1 if starter_suit == hand_suits[0] else 0)        
         description = "" if score == 0 else ("%d-card flush" % score)
         return score, description
+
+def score_play(card_seq):
+    """Return score for latest move in an active play sequence.
+
+    :param card_seq: List of all cards played (oldest to newest).
+    :return: Points earned by player of latest card played in the sequence.
+    """
+    score = 0
+    score_scenarios = [ExactlyEqualsN(n=15), ExactlyEqualsN(n=31),
+                        HasPairTripleQuad(), HasStraight_DuringPlay()]
+    for scenario in score_scenarios:
+        s, desc = scenario.check(card_seq[:])
+        score += s
+        if desc:
+            logger.debug("[SCORE] " + desc)
+    return score
+
+
+def score_hand(cards, is_crib: bool = False, starter_card=None):
+    """Score a hand at the end of a round.
+
+    :param cards: Cards in a single player's hand.
+    :return: Points earned by player.
+    """
+    score = 0
+    if starter_card is None and len(cards) == 5:
+        starter_card = cards[-1]
+    score_scenarios = [CountCombinationsEqualToN(n=15), JackMatchStarterSuitScorer(),
+                        HasPairs_InHand(), HasStraight_InHand(), HasFlush(is_crib=is_crib, starter_card=starter_card)]
+    for scenario in score_scenarios:
+        s, desc = scenario.check(cards[:])
+        score += s
+        if desc:
+            logger.debug("[EOR SCORING] " + desc)
+    return score

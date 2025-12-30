@@ -69,7 +69,7 @@ def score_nobs(cards: Sequence[Card], starter: Card) -> int:
     # jack of hand matching starter suit
     return 1 if any(c.rank == 11 and c.suit == starter.suit for c in cards) else 0
 
-def score_hand(hand: Sequence[Card], starter: Card, is_crib: bool) -> int:
+def score_hand_old(hand: Sequence[Card], starter: Card, is_crib: bool) -> int:
     all_cards = list(hand) + [starter]
     return (
         score_fifteens(all_cards)
@@ -81,7 +81,7 @@ def score_hand(hand: Sequence[Card], starter: Card, is_crib: bool) -> int:
 
 # Pegging scoring utilities
 
-def score_pegging_play(sequence_since_reset: List[Card], new_card: Card, count: int) -> int:
+def score_play_old(sequence_since_reset: List[Card], new_card: Card, count: int) -> int:
     # returns points for playing new_card (pairs, runs, 15/31, last card handled by caller)
     points = 0
     new_count = count + RANK_VALUE[new_card.rank]

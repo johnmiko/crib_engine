@@ -77,7 +77,7 @@ def build_hand(card_str_list: List[str]):
     hand = []
     for card_str in card_str_list:
         hand.append(Card(card_str))
-    return hand
+    return hand    
 
 class Card:
     def __init__(self, rank_and_suit):

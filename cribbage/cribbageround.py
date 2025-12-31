@@ -94,10 +94,11 @@ class CribbageRound:
 
         :return: None
         """
-        shuffles = 3  # ACC Rule 2.1
+        # shuffles = 3  # ACC Rule 2.1
+        # for i in range(shuffles):
+        # shuffling is done when deck is created
+        #     self.deck.shuffle()
         cards_per_player = 6
-        for i in range(shuffles):
-            self.deck.shuffle()
         for _ in range(cards_per_player):
             for key in self.hands.keys():
                 if len(self.hands[key]) < cards_per_player:
@@ -112,7 +113,7 @@ class CribbageRound:
         # for p in self.game.players:
         for pi, player in self.game.players_dict.items():
             cards_to_crib = player.select_crib_cards(self.hands[pi], dealer_is_self=(player == self.dealer))
-            logger.debug(f"Cards cribbed: {cards_to_crib}")
+            logger.info(f"{player.name} cribs: {cards_to_crib} when dealt hand {self.hands[pi]}")
             if not set(cards_to_crib).issubset(set(self.hands[pi])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
             elif len(cards_to_crib) != 2:

@@ -184,7 +184,7 @@ class HasFlush(ScoreCondition):
             return 0, ""
 
         score = 0
-        if len(cards) == 4:
+        if (len(cards) == 4) and (self.starter_card is None):
             suits = [card.suit for card in cards]
             if len(set(suits)) == 1:
                 score = 4, "only 4 cards checked, but has flush"

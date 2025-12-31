@@ -42,5 +42,5 @@ def basic_crib_strategy(hand: List[Card], dealer_is_self: bool) -> Tuple[Card, C
             best_discards.append(tuple(discards))
 
     df = df.sort_values(by="total_score", ascending=False)
-    logger.info("Beginner player discard logic\n" + df.to_string())
+    logger.debug("Beginner player discard logic\n" + df.to_string())
     return best_discards[0]  # type: ignore

@@ -128,12 +128,12 @@ def test_cribbage_round_1_and_2_are_different_when_game_is_seeded():
     game1 = CribbageGame(players=[RandomPlayer(name="Random1", seed=42), RandomPlayer(name="Random2", seed=42)], seed=123)
     round1 = CribbageRound(game=game1, dealer=game1.players[0], seed=game1._rng.randint(0, 2**32 - 1))        
     round1.play()
-    logger.info(f"round1.table: {round1.table}")
+    logger.debug(f"round1.table: {round1.table}")
     round1_score = [game1.board.get_score(p) for p in game1.players]
     round2 = CribbageRound(game=game1, dealer=game1.players[0],seed=game1._rng.randint(0, 2**32 - 1))
     round2.play()
     round2_score = [game1.board.get_score(p) for p in game1.players]
-    logger.info(f"round2.table: {round2.table}")
+    logger.debug(f"round2.table: {round2.table}")
     round1_hand_values = [hand for hand in round1.player_hand_after_discard.values()]
     round2_hand_values = [hand for hand in round2.player_hand_after_discard.values()]
     assert round1_hand_values == ([build_hand(["4c", "qd", "9c", "2s"]), build_hand(["jc", "3d", "7s", "qs"])])

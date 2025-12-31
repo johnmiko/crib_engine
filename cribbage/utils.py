@@ -60,6 +60,28 @@ def wilson_ci(wins: int, n: int, z: float = 1.96) -> tuple[float, float]:
 
     
 
+def play_multiple_games_old(num_games, p0, p1, seed=None) -> dict:
+    wins = 0
+    diffs = []
+    for i in range(num_games):
+        if (i % 100) == 0:
+            logger.info(f"Playing game {i}/{num_games}")
+        # Alternate seats because cribbage has dealer advantage
+        if i % 2 == 0:
+            s0, s1 = play_game(p0, p1, seed=seed)
+            diff = s0 - s1
+            if diff > 0:
+                wins += 1
+        else:
+            s0, s1 = play_game(p1, p0, seed=seed)
+            diff = s1 - s0
+            if diff > 0:
+                wins += 1
+        diffs.append(diff)
+    winrate = wins / num_games
+    lo, hi = wilson_ci(wins, num_games)    
+    return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi}
+
 def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
     wins = 0
     diffs = []

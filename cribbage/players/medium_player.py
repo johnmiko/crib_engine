@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 #     conn.close()
 
-# def get_hand_stats_df(hand, dealer_is_self):
+# def get_6_card_stats_df(hand, dealer_is_self):
 #     _load_stats_dfs()
     
 #     # Build all combinations at once without iterative DataFrame concatenation
@@ -74,10 +74,10 @@ logger = logging.getLogger(__name__)
 #     logger.info("\n" + df3[["hand_key", "crib_key", "min_score_hand", "max_score_hand", "avg_score_hand", "avg_score_crib", "avg_score"]].sort_values(by="avg_score", ascending=False).to_string())
 #     return df3
 
-def get_hand_stats_df(hand, dealer_is_self): 
+def get_6_card_stats_df(hand, dealer_is_self): 
     hand_keys = []
     crib_keys = []
-    df = pd.DataFrame(columns=["key", "hand_key","crib_key","min_score", "max_score", "avg_score"])
+    df = pd.DataFrame(columns=["key", "hand_key","crib_key","min_score", "max_score", "avg_score_approx"])
     for keep in combinations(hand, 4):
         discard = tuple(c for c in hand if c not in keep)
         crib_key = normalize_hand_to_str(discard)
@@ -100,7 +100,7 @@ def get_hand_stats_df(hand, dealer_is_self):
     df_hands = pd.read_sql_query(hand_query, conn, params=hand_keys_str)
     df_hands = df_hands.rename(columns={"min_score": "min_score_hand",
                                 "max_score": "max_score_hand",
-                                "avg_score": "avg_score_hand"})
+                                "avg_score": "avg_score_hand_approx"})
     crib_keys_str = [ck for ck in crib_keys]
     crib_placeholders = ",".join(["?"] * len(crib_keys_str))
     crib_query = f"""
@@ -111,13 +111,13 @@ def get_hand_stats_df(hand, dealer_is_self):
     df_crib = pd.read_sql_query(crib_query, conn, params=crib_keys_str)
     df_crib = df_crib.rename(columns={"min_score": "min_score_crib",
                                         "max_score": "max_score_crib",
-                                        "avg_score": "avg_score_crib",
+                                        "avg_score": "avg_score_crib_approx",
                                         "hand_key": "crib_key"})
     df2 = pd.merge(df, df_crib, left_on="crib_key", right_on="crib_key")
     df3 = pd.merge(df2, df_hands, left_on="hand_key", right_on="hand_key")
     df3["min_score"] = df3["min_score_hand"] + (df3["min_score_crib"] if dealer_is_self else -df3["max_score_crib"])
     df3["max_score"] = df3["max_score_hand"] + (df3["max_score_crib"] if dealer_is_self else -df3["min_score_crib"])
-    df3["avg_score"] = df3["avg_score_hand"] + (df3["avg_score_crib"] if dealer_is_self else -df3["avg_score_crib"])
+    df3["avg_score_approx"] = df3["avg_score_hand_approx"] + (df3["avg_score_crib_approx"] if dealer_is_self else -df3["avg_score_crib_approx"])
     return df3
 
 class MediumPlayer(BeginnerPlayer):
@@ -125,8 +125,8 @@ class MediumPlayer(BeginnerPlayer):
         super().__init__(name=name)
 
     def select_crib_cards(self, hand, dealer_is_self):                
-        df3 = get_hand_stats_df(hand, dealer_is_self)
-        best_discards_str = df3.loc[df3["avg_score"] == df3["avg_score"].max()]["crib_key"].values[0]
+        df3 = get_6_card_stats_df(hand, dealer_is_self)
+        best_discards_str = df3.loc[df3["avg_score_approx"] == df3["avg_score_approx"].max()]["crib_key"].values[0]
         best_discards = best_discards_str.lower().replace("t", "10").split("|")
         best_discards_cards = build_hand(best_discards)
         return tuple(best_discards_cards)

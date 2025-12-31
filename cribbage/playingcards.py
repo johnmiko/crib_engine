@@ -73,11 +73,21 @@ def get_random_hand(num_cards: int = 6, seed: int | None = None):
         hand.append(deck.draw())
     return hand    
 
-def build_hand(card_str_list: List[str]):
-    hand = []
+def build_hand(card_str_list: List[str] | str) -> List[Card]:
+    # accepts arguments such as
+    # ["3h","4c","5d","6h","7h","8d"]
+    # or "3h,4c,5d,6h,7h,8d"
+    # or "3h|4c|5d|6h|7h|8d"
+    hand_list = []
+    if isinstance(card_str_list, str):
+        card_str_list = card_str_list.lower().replace("t","10")
+        if "|" in card_str_list:
+            card_str_list = card_str_list.split("|")
+        else:
+            card_str_list = card_str_list.split(",")
     for card_str in card_str_list:
-        hand.append(Card(card_str))
-    return hand    
+        hand_list.append(Card(card_str))
+    return hand_list    
 
 class Card:
     def __init__(self, rank_and_suit):

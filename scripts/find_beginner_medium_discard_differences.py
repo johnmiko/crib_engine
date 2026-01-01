@@ -38,8 +38,9 @@ else:
     if not content:
         with open(filename, "w") as f:
             f.write(header)
-with open(filename, "a") as f:
+with open(filename, "a") as f:    
     for hand_num in range(num_hands): 
+        print("Processing hand number:", hand_num)
         if hand_num % 2 == 0:
             dealer_is_self = True
         else:
@@ -49,23 +50,24 @@ with open(filename, "a") as f:
         cards = round.deck.cards[:6]
         beginner_discards = beginner_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
         medium_discards = medium_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
-        if set(beginner_discards) != set(medium_discards):            
-            starter = round.deck.cards[6]
-            beginner_hand = [c for c in cards if c not in beginner_discards]
-            medium_hand = [c for c in cards if c not in medium_discards]
-            beginner_crib = list(beginner_discards) + [round.deck.cards[7], round.deck.cards[8]]
-            medium_crib = list(medium_discards) + [round.deck.cards[7], round.deck.cards[8]]
-            beginner_hand_score = score_hand(beginner_hand, is_crib=False, starter_card=starter)
-            beginner_crib_score = score_hand(beginner_crib, is_crib=True, starter_card=starter)
-            medium_hand_score = score_hand(medium_hand, is_crib=False, starter_card=starter)
-            medium_crib_score = score_hand(medium_crib, is_crib=True, starter_card=starter)
-            if dealer_is_self:
-                beginner_score = beginner_hand_score + beginner_crib_score
-                medium_score = medium_hand_score + medium_crib_score
-            else:
-                beginner_score = beginner_hand_score - beginner_crib_score
-                medium_score = medium_hand_score - medium_crib_score
-            f.write(f'"{",".join(str(c) for c in cards)}","{starter}","{",".join(str(c) for c in beginner_discards)}","{",".join(str(c) for c in medium_discards)}","{",".join(str(c) for c in beginner_crib)}","{",".join(str(c) for c in medium_crib)}","{",".join(str(c) for c in beginner_hand)}",{beginner_score},"{",".join(str(c) for c in medium_hand)}",{medium_score},{dealer_is_self}\n')
+    
+        starter = round.deck.cards[6]
+        beginner_hand = [c for c in cards if c not in beginner_discards]
+        medium_hand = [c for c in cards if c not in medium_discards]
+        beginner_crib = list(beginner_discards) + [round.deck.cards[7], round.deck.cards[8]]
+        medium_crib = list(medium_discards) + [round.deck.cards[7], round.deck.cards[8]]
+        beginner_hand_score = score_hand(beginner_hand, is_crib=False, starter_card=starter)
+        beginner_crib_score = score_hand(beginner_crib, is_crib=True, starter_card=starter)
+        medium_hand_score = score_hand(medium_hand, is_crib=False, starter_card=starter)
+        medium_crib_score = score_hand(medium_crib, is_crib=True, starter_card=starter)
+        if dealer_is_self:
+            beginner_score = beginner_hand_score + beginner_crib_score
+            medium_score = medium_hand_score + medium_crib_score
+        else:
+            beginner_score = beginner_hand_score - beginner_crib_score
+            medium_score = medium_hand_score - medium_crib_score
+        # if set(beginner_discards) != set(medium_discards):            
+        f.write(f'"{",".join(str(c) for c in cards)}","{starter}","{",".join(str(c) for c in beginner_discards)}","{",".join(str(c) for c in medium_discards)}","{",".join(str(c) for c in beginner_crib)}","{",".join(str(c) for c in medium_crib)}","{",".join(str(c) for c in beginner_hand)}",{beginner_score},"{",".join(str(c) for c in medium_hand)}",{medium_score},{dealer_is_self}\n')
 df = pd.read_csv(filename, header=0)
 logger.info(f"Score difference when different discards were selected (medium - beginner)")
 df2 = df.drop_duplicates("dealt")

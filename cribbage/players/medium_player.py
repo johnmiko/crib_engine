@@ -6,8 +6,11 @@ from typing import List, Tuple
 from cribbage.constants import DB_PATH
 from cribbage.database import normalize_hand_to_str
 from cribbage.players.beginner_player import BeginnerPlayer
+from cribbage.players.rule_based_player import get_full_deck
 from cribbage.playingcards import Card, build_hand
 import logging
+
+from scripts.generate_all_possible_crib_hand_scores_old import process_dealt_hand_exact
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +129,13 @@ class MediumPlayer(BeginnerPlayer):
 
     def select_crib_cards(self, hand, dealer_is_self):                
         df3 = get_6_card_stats_df_from_db(hand, dealer_is_self)
-        best_discards_str = df3.loc[df3["avg_score_approx"] == df3["avg_score_approx"].max()]["crib_key"].values[0]
+        full_deck = get_full_deck()
+        hand_score_cache = {}
+        crib_score_cache = {}
+        results = process_dealt_hand_exact([hand, full_deck, hand_score_cache, crib_score_cache])
+        df3 = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score", "min_crib_score","avg_crib_score"])
+        df3["avg_total_score"] = df3["avg_hand_score"] + (df3["avg_crib_score"] if dealer_is_self else -df3["avg_crib_score"])
+        best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
         best_discards = best_discards_str.lower().replace("t", "10").split("|")
         best_discards_cards = build_hand(best_discards)
         return tuple(best_discards_cards)

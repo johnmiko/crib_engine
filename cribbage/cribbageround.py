@@ -113,7 +113,7 @@ class CribbageRound:
         # for p in self.game.players:
         for pi, player in self.game.players_dict.items():
             cards_to_crib = player.select_crib_cards(self.hands[pi], dealer_is_self=(player == self.dealer))
-            logger.info(f"{player.name} cribs: {cards_to_crib} when dealt hand {self.hands[pi]}")
+            logger.debug(f"{player.name} cribs: {cards_to_crib} when dealt hand {self.hands[pi]}")
             if not set(cards_to_crib).issubset(set(self.hands[pi])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
             elif len(cards_to_crib) != 2:

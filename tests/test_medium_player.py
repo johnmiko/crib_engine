@@ -180,7 +180,7 @@ def test_process_dealt_hand_only_works_correctly():
     assert incorrect_hand_calcs.empty, f"Bad hand approximations: {incorrect_hand_calcs.to_string()}"    
     
 
-# @pytest.mark.slow
+
 def test_calc_crib_ranges_almost_exact_is_faster_and_close_enough():
     import time
     start_time = time.time()
@@ -224,9 +224,7 @@ def test_calc_crib_ranges_almost_exact_is_faster_and_close_enough():
             round(float(crib_avg), 2),
         ))
     
-    elapsed_time = time.time() - start_time
-    logger.info(f"calculations completed in {elapsed_time:.2f} seconds")
-    
+    elapsed_time = time.time() - start_time    
     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key", "min_crib_score","avg_crib_score"])      
     # the exact crib scores were calculated using the script calculate_exact_crib_values_by_brute_force.py
     df_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],
@@ -289,7 +287,6 @@ def test_calc_crib_ranges_exact_and_slow_is_exact():
         ))
     
     elapsed_time = time.time() - start_time
-    logger.info(f"calculations completed in {elapsed_time:.2f} seconds")    
     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key", "min_crib_score","avg_crib_score"])      
     # the exact crib scores were calculated using the script calculate_exact_crib_values_by_brute_force.py
     df_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],

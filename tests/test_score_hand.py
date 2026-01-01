@@ -16,7 +16,7 @@ def test_has_flush():
         s, desc = scenario.check(cards[:], starter=starter_card)
         score += s
         if desc:
-            logger.info("[EOR SCORING] " + desc)
+            logger.debug("[EOR SCORING] " + desc)
     assert score == 4
 
 def test_score_hand_flush_and_run():
@@ -70,3 +70,42 @@ def test_jack_matches_starter_suit_in_crib():
     assert score == 0
 
 
+def test_hand_flush_scores_four_without_starter_match():
+    hand = build_hand(["3h", "8h", "9h", "qh", "kc"])
+    score = score_hand(hand, is_crib=False)
+    assert score == 4
+
+def test_hand_flush_scores_five_with_starter_match():
+    hand = build_hand(["3h", "8h", "9h", "qh", "kh"])
+    score = score_hand(hand, is_crib=False)
+    assert score == 5
+
+def test_crib_flush_no_starter_is_0():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh", "kc"]), is_crib=True)
+    assert score == 0
+
+def test_crib_flush_with_starter_is_5():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh", "kh"]), is_crib=True)
+    assert score == 5
+
+def test_explicit_starter_card_is_handled_correctly():
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=True, starter_card=Card("kh"))
+    assert score == 5
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=True, starter_card=Card("kc"))
+    assert score == 0
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=False, starter_card=Card("kc"))
+    assert score == 4
+    score = score_hand(build_hand(["3h", "8h", "9h", "qh"]), is_crib=False, starter_card=Card("kh"))
+    assert score == 5
+
+def test_jack_match_starter_suit_scores_one():
+    hand = build_hand(["ah","ac","jh","ks", "2h"])
+    assert JackMatchStarterSuitScorer().check(hand) == (1, "Jack match starter suit")
+
+def test_jack_match_starter_suit_scores_zero():
+    hand = build_hand(["ah","ac","jh","ks", "2d"])
+    assert JackMatchStarterSuitScorer().check(hand) == (0, "")
+
+def test_no_jack_in_hand_and_starter_is_jack():
+    hand = build_hand(["ah","ac","2h","ks", "jh"])
+    assert JackMatchStarterSuitScorer().check(hand) == (0, "")

@@ -7,6 +7,7 @@ from cribbage.players.medium_player import MediumPlayer
 from cribbage.utils import play_multiple_games
 from cribbage.cribbagegame import CribbageGame
 import sqlite3
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -51,11 +52,23 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 #     logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%})")
 #     assert win_rate > 0.5, "medium_player should win at least 63% of the time against BeginnerPlayer"    
 
-def beginner_vs_medium_crib_discards():
+def test_beginner_vs_medium_crib_discards():    
     filename = "discards_differ.log"
     df = pd.read_csv(filename, header=0)
     logger.info(f"Score difference when different discards were selected (medium - beginner)")
     df2 = df.drop_duplicates("dealt")
+    df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
+    total_score_dif = df2["score_dif"].sum()
+    avg_score_dif = df2["score_dif"].mean()
+    logger.info(f"Average score difference over {len(df2)} hands: {avg_score_dif:.2f}")
+    logger.info(f"Total score difference over {len(df2)} hands: {total_score_dif}")
+    assert total_score_dif > 0, "MediumPlayer should have a positive score difference over BeginnerPlayer when discards differ"
+
+def test_beginner_vs_medium_crib_discards_only_where_discards_are_different():    
+    filename = "discards_differ.log"
+    df = pd.read_csv(filename, header=0)
+    logger.info(f"Score difference when different discards were selected (medium - beginner)")
+    df2 = df[df["medium_discard"] != df["beginner_discard"]]
     df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
     total_score_dif = df2["score_dif"].sum()
     avg_score_dif = df2["score_dif"].mean()

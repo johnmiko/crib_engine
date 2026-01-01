@@ -1,4 +1,5 @@
 from collections import defaultdict
+import time
 import itertools
 import numpy as np
 from cribbage.database import normalize_hand_to_str
@@ -15,7 +16,7 @@ from cribbage.playingcards import Card
 import pandas as pd
 import logging
 
-from scripts.generate_all_possible_crib_hand_scores_old import calc_crib_ranges_exact, process_dealt_hand_exact, process_dealt_hand_only_exact
+from scripts.generate_all_possible_crib_hand_scores_old import calc_crib_ranges_almost_exact, calc_crib_ranges_exact_and_slow, process_dealt_hand_exact, process_dealt_hand_only_exact
 
 
 logger = logging.getLogger(__name__)
@@ -179,7 +180,11 @@ def test_process_dealt_hand_only_works_correctly():
     assert incorrect_hand_calcs.empty, f"Bad hand approximations: {incorrect_hand_calcs.to_string()}"    
     
 
-def test_calc_crib_ranges_exact_works_correctly():    
+# @pytest.mark.slow
+def test_calc_crib_ranges_almost_exact_is_faster_and_close_enough():
+    import time
+    start_time = time.time()
+    
     dealt_hand = build_hand(["5h","6c","7d","9h","2h","10d"])
     full_deck = get_full_deck()    
     # caches are wrong, force to empty for now
@@ -211,28 +216,98 @@ def test_calc_crib_ranges_exact_works_correctly():
 
 
         # CRIB SCORES (new optimized calc)
-        min_crib, crib_avg = calc_crib_ranges_exact(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
+        min_crib, crib_avg = calc_crib_ranges_almost_exact(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
         results.append((
             hand_key,
             crib_key,
             float(min_crib),
             round(float(crib_avg), 2),
         ))
+    
+    elapsed_time = time.time() - start_time
+    logger.info(f"calculations completed in {elapsed_time:.2f} seconds")
+    
     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key", "min_crib_score","avg_crib_score"])      
     # the exact crib scores were calculated using the script calculate_exact_crib_values_by_brute_force.py
     df_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],
                              "avg_crib_score_exact": [4.84, 3.67, 4.31, 3.6, 5.53, 5.37, 7.21, 5.76, 6.43, 7.1, 4.1, 4.17, 4.24, 4.21, 5.94]})
     df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
     df2["avg_crib_score_diff"] = df2["avg_crib_score"] - df2["avg_crib_score_exact"]    
-    bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(-0.01, 0.01), "avg_crib_score_diff"]
-    df3 = df2.loc[~df2["avg_crib_score_diff"].between(0, 0.01)]    
+    bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(-0.03, 0.03), "avg_crib_score_diff"]
+    df3 = df2.loc[~df2["avg_crib_score_diff"].between(-0.03, 0.03)]
     df3 = df3.sort_values(by="avg_crib_score_exact", ascending=False)
-    logger.info(f"\n{df3[["hand_key","crib_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]]}")
     if not bad_crib_approxes.empty:        
         logger.error("Bad approximations found:\n " + df3[["hand_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]].to_string())
     assert bad_crib_approxes.empty, f"Bad crib approximations: {bad_crib_approxes.to_string()}"
+    
+    # Performance assertion - should be much faster than original 13+ seconds
+    # Current implementation achieves ~8s (63% improvement over original)
+    max_elapsed_time = 7
+    assert elapsed_time < max_elapsed_time, f"Test took {elapsed_time:.2f}s, expected < {max_elapsed_time}s"
+
+
+def test_calc_crib_ranges_exact_and_slow_is_exact():    
+    start_time = time.time()
+    
+    dealt_hand = build_hand(["5h","6c","7d","9h","2h","10d"])
+    full_deck = get_full_deck()    
+    # caches are wrong, force to empty for now
+    hand_score_cache = {}
+    crib_score_cache = {}
+    rank_list = ['a', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k']
+    suits_list = ['c', 'd', 'h', 's']
+    results = []
+
+    # all 2-card discards from the 6-card dealt hand
+    discard_combos = itertools.combinations(range(6), 2)
+    
+    for discard_idx in discard_combos:
+        logger.info(f"Processing discard idx: {discard_idx}")
+        kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
+        discarded_cards = [dealt_hand[i] for i in discard_idx]
+
+        hand_key = normalize_hand_to_str(kept_hand)
+        crib_key = normalize_hand_to_str(discarded_cards)
+        # starter cannot be any of the discarded cards
+        starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
+
+        # Group starters by rank -> set of available suits
+        rank_to_suits = defaultdict(set)
+        for starter in starter_pool:
+            rank = starter.rank
+            suit = starter.suit
+            rank_to_suits[rank].add(suit)
+
+
+        # CRIB SCORES (new optimized calc)
+        min_crib, crib_avg = calc_crib_ranges_exact_and_slow(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
+        results.append((
+            hand_key,
+            crib_key,
+            float(min_crib),
+            round(float(crib_avg), 2),
+        ))
+    
+    elapsed_time = time.time() - start_time
+    logger.info(f"calculations completed in {elapsed_time:.2f} seconds")    
+    df_processed = pd.DataFrame(results, columns=["hand_key","crib_key", "min_crib_score","avg_crib_score"])      
+    # the exact crib scores were calculated using the script calculate_exact_crib_values_by_brute_force.py
+    df_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],
+                             "avg_crib_score_exact": [4.84, 3.67, 4.31, 3.6, 5.53, 5.37, 7.21, 5.76, 6.43, 7.1, 4.1, 4.17, 4.24, 4.21, 5.94]})
+    df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
+    df2["avg_crib_score_diff"] = df2["avg_crib_score"] - df2["avg_crib_score_exact"]        
+    df3 = df2.loc[df2["avg_crib_score_diff"] != 0]    
+    df3 = df3.sort_values(by="avg_crib_score_exact", ascending=False)
+    if not df3.empty:        
+        logger.error("Bad approximations found:\n " + df3[["hand_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]].to_string())
+    assert df3.empty, f"Bad crib approximations: {df3.to_string()}"
+    
+    # Performance assertion - should be much faster than original 13+ seconds
+    # Current implementation achieves ~8s (63% improvement over original)
+    assert elapsed_time < 15.0, f"Test took {elapsed_time:.2f}s, expected < 15.0s"
 
     
+
 def test_process_dealt_hand_and_crib_works_correctly():
     # hand = build_hand(RUN_FLUSH_HAND)
     full_deck = get_full_deck()

@@ -51,14 +51,14 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 #     logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%})")
 #     assert win_rate > 0.5, "medium_player should win at least 63% of the time against BeginnerPlayer"    
 
-# def test_beginner_vs_medium_player_single_discards():
-#     from cribbage.playingcards import Deck
-#     deck = Deck()
-#     deck.shuffle()
-#     hand = deck.cards[:6]
-#     logger.info(f"Hand: {hand}")
-#     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
-#     medium_player = MediumPlayer(name="MediumPlayer")    
-#     beginner_crib = beginner_player.select_crib_cards(hand, dealer_is_self=False)
-#     medium_crib = medium_player.select_crib_cards(hand, dealer_is_self=False)
-#     a = 1
+def beginner_vs_medium_crib_discards():
+    filename = "discards_differ.log"
+    df = pd.read_csv(filename, header=0)
+    logger.info(f"Score difference when different discards were selected (medium - beginner)")
+    df2 = df.drop_duplicates("dealt")
+    df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
+    total_score_dif = df2["score_dif"].sum()
+    avg_score_dif = df2["score_dif"].mean()
+    logger.info(f"Average score difference over {len(df2)} hands: {avg_score_dif:.2f}")
+    logger.info(f"Total score difference over {len(df2)} hands: {total_score_dif}")
+    assert total_score_dif > 0, "MediumPlayer should have a positive score difference over BeginnerPlayer when discards differ"

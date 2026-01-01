@@ -8,7 +8,7 @@ sys.path.insert(0, ".")
 # sys.path.insert(0, "...")
 from cribbage.scoring import score_hand
 from cribbage.cribbagegame import CribbageGame
-from cribbage.cribbageround import CribbageRound
+from cribbage.cribbagecrib_round import Cribbagecrib_round
 from cribbage.players.beginner_player import BeginnerPlayer
 from cribbage.players.medium_player import MediumPlayer
 from cribbage.utils import play_multiple_games
@@ -46,16 +46,17 @@ with open(filename, "a") as f:
         else:
             dealer_is_self = False
         game = CribbageGame(players=[medium_player, beginner_player], seed=None)
-        round = CribbageRound(game, dealer=medium_player, seed=None)
-        cards = round.deck.cards[:6]
+        crib_round = Cribbagecrib_round(game, dealer=medium_player, seed=None)
+        cards = crib_round.deck.cards[:6]
         beginner_discards = beginner_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
         medium_discards = medium_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
     
-        starter = round.deck.cards[6]
+        starter = crib_round.deck.cards[6]
         beginner_hand = [c for c in cards if c not in beginner_discards]
         medium_hand = [c for c in cards if c not in medium_discards]
-        beginner_crib = list(beginner_discards) + [round.deck.cards[7], round.deck.cards[8]]
-        medium_crib = list(medium_discards) + [round.deck.cards[7], round.deck.cards[8]]
+        random_crib_cards = [crib_round.deck.cards[7], crib_round.deck.cards[8]]
+        beginner_crib = list(beginner_discards) + random_crib_cards
+        medium_crib = list(medium_discards) + random_crib_cards
         beginner_hand_score = score_hand(beginner_hand, is_crib=False, starter_card=starter)
         beginner_crib_score = score_hand(beginner_crib, is_crib=True, starter_card=starter)
         medium_hand_score = score_hand(medium_hand, is_crib=False, starter_card=starter)
@@ -69,7 +70,7 @@ with open(filename, "a") as f:
         # if set(beginner_discards) != set(medium_discards):            
         f.write(f'"{",".join(str(c) for c in cards)}","{starter}","{",".join(str(c) for c in beginner_discards)}","{",".join(str(c) for c in medium_discards)}","{",".join(str(c) for c in beginner_crib)}","{",".join(str(c) for c in medium_crib)}","{",".join(str(c) for c in beginner_hand)}",{beginner_score},"{",".join(str(c) for c in medium_hand)}",{medium_score},{dealer_is_self}\n')
 df = pd.read_csv(filename, header=0)
-logger.info(f"Score difference when different discards were selected (medium - beginner)")
+logger.info(f"Score difference after {len(df)} hands were evaluated (medium - beginner)")
 df2 = df.drop_duplicates("dealt")
 df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
 total_score_dif = df2["score_dif"].sum()

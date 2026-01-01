@@ -86,8 +86,8 @@ def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
     wins = 0
     diffs = []
     for i in range(num_games):
-        if (i % 100) == 0:
-            logger.info(f"Playing game {i}/{num_games}")
+        # if (i % 100) == 0:
+        logger.info(f"Playing game {i}/{num_games}")
         # Alternate seats because cribbage has dealer advantage
         if i % 2 == 0:
             s0, s1 = play_game(p0, p1, seed=seed)

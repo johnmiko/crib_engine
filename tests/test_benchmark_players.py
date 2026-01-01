@@ -1,4 +1,6 @@
 import logging
+
+import pytest
 from cribbage.players.random_player import RandomPlayer
 from cribbage.players.play_first_card_player import PlayFirstCardPlayer
 from cribbage.players.beginner_player import BeginnerPlayer
@@ -41,22 +43,23 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 #     logger.info(f"BeginnerPlayer wins: {wins}/{num_games} ({win_rate:.2%})")
 #     assert win_rate > 0.98, "BeginnerPlayer should win at least 98% of the time against PlayFirstCardPlayer"        
 
-# def test_beginner_vs_medium_player():
-#     num_games = 500
-#     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
-#     medium_player = MediumPlayer(name="MediumPlayer")    
-#     results = play_multiple_games(num_games, p0=medium_player, p1=beginner_player)    
-#     wins, diffs, winrate, lo, hi = results["wins"], results["diffs"], results["winrate"], results["ci_lo"], results["ci_hi"]    
-#     win_rate = wins / num_games
-#     logger.info(f"diffs: {diffs}")
-#     logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%})")
-#     assert win_rate > 0.5, "medium_player should win at least 63% of the time against BeginnerPlayer"    
+# @pytest.mark.very_slow
+def test_beginner_vs_medium_player():
+    num_games = 100
+    beginner_player = BeginnerPlayer(name="BeginnerPlayer")
+    medium_player = MediumPlayer(name="MediumPlayer")    
+    results = play_multiple_games(num_games, p0=medium_player, p1=beginner_player)    
+    wins, diffs, winrate, lo, hi = results["wins"], results["diffs"], results["winrate"], results["ci_lo"], results["ci_hi"]    
+    win_rate = wins / num_games
+    logger.info(f"diffs: {diffs}")
+    logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%})")
+    assert win_rate > 0.5, "medium_player should win at least 63% of the time against BeginnerPlayer"    
 
-def test_beginner_vs_medium_crib_discards():    
+def test_beginner_vs_medium_crib_discards_all_hands():    
     filename = "discards_differ.log"
     df = pd.read_csv(filename, header=0)
     logger.info(f"Score difference when different discards were selected (medium - beginner)")
-    df2 = df.drop_duplicates("dealt")
+    df2 = df.drop_duplicates(subset=["dealt", "starter"])
     df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
     total_score_dif = df2["score_dif"].sum()
     avg_score_dif = df2["score_dif"].mean()
@@ -68,6 +71,10 @@ def test_beginner_vs_medium_crib_discards_only_where_discards_are_different():
     filename = "discards_differ.log"
     df = pd.read_csv(filename, header=0)
     logger.info(f"Score difference when different discards were selected (medium - beginner)")
+    df[["medium_discard", "beginner_discard"]] = (
+        df[["medium_discard", "beginner_discard"]]
+        .apply(lambda col: col.str.split(",").apply(lambda x: ",".join(sorted(x))))
+    )
     df2 = df[df["medium_discard"] != df["beginner_discard"]]
     df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
     total_score_dif = df2["score_dif"].sum()

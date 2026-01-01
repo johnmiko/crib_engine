@@ -1,5 +1,5 @@
 from cribbage.playingcards import Card, build_hand
-from cribbage.scoring import HasFlush, score_hand
+from cribbage.scoring import HasFlush, score_hand, JackMatchStarterSuitScorer
 
 import logging
 

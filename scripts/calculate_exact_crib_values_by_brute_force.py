@@ -11,6 +11,8 @@ from time import perf_counter
 
 
 dealt_hand = build_hand(["5h","6c","7d","9h","2h","10d"])
+"3d,10c,6s,kd,6d,4c"
+dealt_hand = build_hand(['3d', '10c', '6s', 'kd', '6d', '4c'])
 full_deck = get_full_deck()
 
 # Calculate exact crib scores for each possible discard

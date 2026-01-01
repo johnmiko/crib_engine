@@ -8,7 +8,7 @@ sys.path.insert(0, ".")
 # sys.path.insert(0, "...")
 from cribbage.scoring import score_hand
 from cribbage.cribbagegame import CribbageGame
-from cribbage.cribbagecrib_round import Cribbagecrib_round
+from cribbage.cribbageround import CribbageRound
 from cribbage.players.beginner_player import BeginnerPlayer
 from cribbage.players.medium_player import MediumPlayer
 from cribbage.utils import play_multiple_games
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
     # I can manually look at them, but what about the crib? If they have the same hand, the crib doesn't make any sense
     # I will put 2 random cards in the crib I guess? But that's assuming they have the same discards
 filename = "discards_differ.log"
-num_hands = 100    
+num_hands = 1000    
 beginner_player = BeginnerPlayer(name="BeginnerPlayer")
 medium_player = MediumPlayer(name="MediumPlayer")
 header = "dealt,starter,beginner_discard,medium_discard,beginner_crib,medium_crib,beginner_hand,beginner_score,medium_hand,medium_score,dealer_is_self\n"
@@ -46,7 +46,7 @@ with open(filename, "a") as f:
         else:
             dealer_is_self = False
         game = CribbageGame(players=[medium_player, beginner_player], seed=None)
-        crib_round = Cribbagecrib_round(game, dealer=medium_player, seed=None)
+        crib_round = CribbageRound(game, dealer=medium_player, seed=None)
         cards = crib_round.deck.cards[:6]
         beginner_discards = beginner_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
         medium_discards = medium_player.select_crib_cards(cards, dealer_is_self=dealer_is_self)
@@ -71,7 +71,7 @@ with open(filename, "a") as f:
         f.write(f'"{",".join(str(c) for c in cards)}","{starter}","{",".join(str(c) for c in beginner_discards)}","{",".join(str(c) for c in medium_discards)}","{",".join(str(c) for c in beginner_crib)}","{",".join(str(c) for c in medium_crib)}","{",".join(str(c) for c in beginner_hand)}",{beginner_score},"{",".join(str(c) for c in medium_hand)}",{medium_score},{dealer_is_self}\n')
 df = pd.read_csv(filename, header=0)
 logger.info(f"Score difference after {len(df)} hands were evaluated (medium - beginner)")
-df2 = df.drop_duplicates("dealt")
+df2 = df.drop_duplicates(subset=["dealt", "starter"])
 df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
 total_score_dif = df2["score_dif"].sum()
 logger.info(f"Total score difference over {len(df2)} hands: {total_score_dif}")

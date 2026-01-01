@@ -1,4 +1,11 @@
-The scoring's just literally not correct
+test_medium_player
+    need to delete the tests that I'm not using anymore 
+medium_player_discard_strat
+    hand_stats = query "hand_stats" table, check if values are already calculated
+    for missing_data in hand_stats:
+        row = process_dealt_hand()
+        update_table
+    discards = hand_stats +/- crib values
 
 
 Need to check that test_medium_player passes

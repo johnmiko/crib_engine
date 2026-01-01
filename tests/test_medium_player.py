@@ -15,7 +15,7 @@ from cribbage.playingcards import Card
 import pandas as pd
 import logging
 
-from scripts.generate_all_possible_crib_hand_scores_old import calc_crib_ranges, process_dealt_hand, process_dealt_hand_only
+from scripts.generate_all_possible_crib_hand_scores_old import calc_crib_ranges_exact, process_dealt_hand_exact, process_dealt_hand_only_exact
 
 
 logger = logging.getLogger(__name__)
@@ -162,14 +162,13 @@ def test_process_dealt_hand_only_works_correctly():
     # a = 1 
     tolerance = 0.1 
     hand = build_hand(["5h","6c","7d","9h","2h","10d"])
-    results = process_dealt_hand_only([hand, full_deck, hand_score_cache])
+    results = process_dealt_hand_only_exact([hand, full_deck, hand_score_cache])
     df_processed = pd.DataFrame(results, columns=["hand_key","min_score","max_score","avg_hand_score"])
     # df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score"])
     # df = get_6_card_stats_df_from_db(hand, dealer_is_self=False)
     # df2 = df.sort_values(by="avg_score_approx", ascending=False)
     df_expected = pd.DataFrame({"hand_key":['5H|6C|7D|9H', '5H|6C|7D|TD', '2H|5H|6C|7D','5H|6C|9H|TD', '2H|5H|6C|9H', '5H|7D|9H|TD', '2H|5H|6C|TD', '2H|5H|9H|TD', '2H|5H|7D|9H', '2H|6C|7D|9H', '2H|5H|7D|TD', '6C|7D|9H|TD', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD'],
-                             "avg_hand_score_exact": [8.11, 7.85, 8.46, 6.89, 4.85, 4.76, 4.67, 4.65, 2.93, 6.07, 4.5, 4.11, 3.98, 3.91, 2.04],
-                             "avg_crib_score_exact": [3.03, 3.13, 3.80, 3.24, 2.73, 3.32, 3.31, 4.50, 2.80, 5.98, 4.53, 4.76, 4.73, 5.37, 6.05]})
+                             "avg_hand_score_exact": [8.11, 7.85, 8.46, 6.89, 4.85, 4.76, 4.67, 4.65, 2.93, 6.07, 4.5, 4.11, 3.98, 3.91, 2.04]})
     df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
     df2["avg_hand_score_diff"] = df2["avg_hand_score"] - df2["avg_hand_score_exact"]
     incorrect_hand_calcs = df2.loc[df2["avg_hand_score_diff"] != 0, "avg_hand_score_diff"]
@@ -212,7 +211,7 @@ def test_calc_crib_ranges_works_correctly():
 
 
         # CRIB SCORES (new optimized calc)
-        min_crib, crib_avg = calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
+        min_crib, crib_avg = calc_crib_ranges_exact(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
         results.append((
             hand_key,
             crib_key,
@@ -234,34 +233,37 @@ def test_calc_crib_ranges_works_correctly():
     assert bad_crib_approxes.empty, f"Bad crib approximations: {bad_crib_approxes.to_string()}"
 
     
-# def test_process_dealt_hand_and_crib_works_correctly():
-#     # hand = build_hand(RUN_FLUSH_HAND)
-#     full_deck = get_full_deck()
-#     hand_score_cache = {}    
-#     crib_score_cache = {}
-#     # results = process_dealt_hand([hand, full_deck, hand_score_cache])
-#     # a = 1 
-#     tolerance = 0.1 
-#     hand = build_hand(["5h","6c","7d","9h","2h","10d"])
-#     results = process_dealt_hand([hand, full_deck, hand_score_cache, crib_score_cache])
-#     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score", "min_crib_score","avg_crib_score"])
-#     # df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score"])
-#     # df = get_6_card_stats_df_from_db(hand, dealer_is_self=False)
-#     # df2 = df.sort_values(by="avg_score_approx", ascending=False)
-#     df_expected = pd.DataFrame({"hand_key":['5H|6C|7D|9H', '5H|6C|7D|TD', '2H|5H|6C|7D','5H|6C|9H|TD', '2H|5H|6C|9H', '5H|7D|9H|TD', '2H|5H|6C|TD', '2H|5H|9H|TD', '2H|5H|7D|9H', '2H|6C|7D|9H', '2H|5H|7D|TD', '6C|7D|9H|TD', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD'],
-#                              "avg_hand_score_exact": [8.11, 7.85, 8.46, 6.89, 4.85, 4.76, 4.67, 4.65, 2.93, 6.07, 4.5, 4.11, 3.98, 3.91, 2.04],
-#                              "avg_crib_score_exact": [3.03, 3.13, 3.80, 3.24, 2.73, 3.32, 3.31, 4.50, 2.80, 5.98, 4.53, 4.76, 4.73, 5.37, 6.05]})
-#     df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
-#     df2["avg_hand_score_diff"] = df2["avg_hand_score"] - df2["avg_hand_score_exact"]    
-#     df2["avg_crib_score_diff"] = df2["avg_crib_score"] - df2["avg_crib_score_exact"]
-#     bad_hand_approxes = df2.loc[~df2["avg_hand_score_diff"].between(0, 0.01), "avg_hand_score_diff"]
-#     bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(0, 0.01), "avg_crib_score_diff"]    
-#     df3 = df2.loc[~df2["avg_hand_score_diff"].between(0, 0.1) | ~df2["avg_crib_score_diff"].between(0, 0.1)]    
-#     df3["avg_score_exact"] = df3["avg_hand_score_exact"] + df3["avg_crib_score_exact"]
-#     df3 = df3.sort_values(by="avg_score_exact", ascending=False)
-#     logger.info(f"\n{df3[["hand_key","crib_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]]}")
-#     if not bad_hand_approxes.empty or not bad_crib_approxes.empty:        
-#         logger.error("Bad approximations found:\n " + df3[["hand_key","avg_hand_score","avg_hand_score_exact","avg_hand_score_diff", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]].to_string())
-#     assert bad_hand_approxes.empty, f"Bad hand approximations: {bad_hand_approxes.to_string()}"
-#     assert bad_crib_approxes.empty, f"Bad crib approximations: {bad_crib_approxes.to_string()}"
+def test_process_dealt_hand_and_crib_works_correctly():
+    # hand = build_hand(RUN_FLUSH_HAND)
+    full_deck = get_full_deck()
+    hand_score_cache = {}    
+    crib_score_cache = {}
+    # results = process_dealt_hand([hand, full_deck, hand_score_cache])
+    # a = 1 
+    tolerance = 0.1 
+    hand = build_hand(["5h","6c","7d","9h","2h","10d"])
+    results = process_dealt_hand_exact([hand, full_deck, hand_score_cache, crib_score_cache])
+    df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score", "min_crib_score","avg_crib_score"])
+    # df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score"])
+    # df = get_6_card_stats_df_from_db(hand, dealer_is_self=False)
+    # df2 = df.sort_values(by="avg_score_approx", ascending=False)
+    df_hand_expected = pd.DataFrame({"hand_key":['5H|6C|7D|9H', '5H|6C|7D|TD', '2H|5H|6C|7D','5H|6C|9H|TD', '2H|5H|6C|9H', '5H|7D|9H|TD', '2H|5H|6C|TD', '2H|5H|9H|TD', '2H|5H|7D|9H', '2H|6C|7D|9H', '2H|5H|7D|TD', '6C|7D|9H|TD', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD'],
+                             "avg_hand_score_exact": [8.11, 7.85, 8.46, 6.89, 4.85, 4.76, 4.67, 4.65, 2.93, 6.07, 4.5, 4.11, 3.98, 3.91, 2.04],
+                             })
+    df_crib_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],
+                             "avg_crib_score_exact": [4.84, 3.67, 4.31, 3.6, 5.53, 5.37, 7.21, 5.76, 6.43, 7.1, 4.1, 4.17, 4.24, 4.21, 5.94]})
+    df_expected = pd.merge(df_hand_expected, df_crib_expected, left_on="hand_key", right_on="hand_key")
+    df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
+    df2["avg_hand_score_diff"] = df2["avg_hand_score"] - df2["avg_hand_score_exact"]    
+    df2["avg_crib_score_diff"] = df2["avg_crib_score"] - df2["avg_crib_score_exact"]
+    bad_hand_approxes = df2.loc[~df2["avg_hand_score_diff"].between(0, 0.01), "avg_hand_score_diff"]
+    bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(0, 0.01), "avg_crib_score_diff"]    
+    df3 = df2.loc[~df2["avg_hand_score_diff"].between(0, 0.1) | ~df2["avg_crib_score_diff"].between(0, 0.1)]    
+    df3["avg_score_exact"] = df3["avg_hand_score_exact"] + df3["avg_crib_score_exact"]
+    df3 = df3.sort_values(by="avg_score_exact", ascending=False)
+    logger.info(f"\n{df3[["hand_key","crib_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]]}")
+    if not bad_hand_approxes.empty or not bad_crib_approxes.empty:        
+        logger.error("Bad approximations found:\n " + df3[["hand_key","avg_hand_score","avg_hand_score_exact","avg_hand_score_diff", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]].to_string())
+    assert bad_hand_approxes.empty, f"Bad hand approximations: {bad_hand_approxes.to_string()}"
+    assert bad_crib_approxes.empty, f"Bad crib approximations: {bad_crib_approxes.to_string()}"
     

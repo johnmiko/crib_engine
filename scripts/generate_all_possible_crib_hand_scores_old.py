@@ -53,7 +53,7 @@ def process_dealt_hand_old(args):
 
     return results
 
-def calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache):
+def calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache):
     # Compute scores
     scores = []
     for rank, avail_suits in rank_to_suits.items():
@@ -86,7 +86,7 @@ def calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suit
             scores.append(score)
     return scores
 
-def process_dealt_hand_only(args):
+def process_dealt_hand_only_exact(args):
     dealt_hand, full_deck, hand_score_cache = args
     # currently forcing hand score cache to none because there is bugs in it
     hand_score_cache = {}
@@ -117,7 +117,7 @@ def process_dealt_hand_only(args):
             suit = starter.suit
             rank_to_suits[rank].add(suit)
 
-        scores = calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
+        scores = calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
 
         scores_np = np.array(scores, dtype=np.float32)
         results.append((
@@ -128,7 +128,95 @@ def process_dealt_hand_only(args):
         ))
     return results
 
-def calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache):
+
+def update_table(hand_key, crib_key, hand_ranges=None, crib_ranges=None, conn=None):
+    if conn is None:
+        conn = sqlite3.connect(DB_PATH)
+    table_name = "hand_stats"
+    cur = conn.cursor()
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            hand_key TEXT,
+            crib_key TEXT,
+            min_hand_score INTEGER,
+            max_hand_score INTEGER,
+            avg_hand_score REAL,
+            min_crib_score INTEGER,
+            avg_crib_score REAL,
+            PRIMARY KEY (hand_key, crib_key)
+        )
+        """
+    )
+    conn.commit()
+    # check if key already exists
+    cur.execute(f"SELECT 1 FROM {table_name} WHERE hand_key = ? AND crib_key = ?", (hand_key, crib_key))
+    row = cur.fetchone()
+    if row:
+        if crib_ranges is not None: 
+            cur.execute(
+                f"""
+                UPDATE {table_name}
+                SET min_crib_score = ?,
+                    avg_crib_score = ?
+                WHERE hand_key = ? AND crib_key = ?
+                """,
+                (crib_ranges[0], crib_ranges[1], hand_key, crib_key)
+            )
+        elif hand_ranges is not None:
+            cur.execute(
+                f"""
+                UPDATE {table_name}
+                SET min_hand_score = ?,
+                    max_hand_score = ?,
+                    avg_hand_score = ?,
+                WHERE hand_key = ? AND crib_key = ?
+                """,
+                (hand_ranges[0], hand_ranges[1], hand_ranges[2], hand_key, crib_key)
+            )
+
+    else:
+        if (crib_ranges is not None) and (hand_ranges is not None):
+            cur.execute(
+            f"""
+            INSERT INTO {table_name}
+            (hand_key, crib_key,
+            min_hand_score, max_hand_score, avg_hand_score,
+            min_crib_score, avg_crib_score)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (hand_key, crib_key,
+            hand_ranges[0], hand_ranges[1], hand_ranges[2],
+            crib_ranges[0], crib_ranges[1])
+        )
+        elif crib_ranges is not None:
+            cur.execute(
+            f"""
+            INSERT INTO {table_name}
+            (hand_key, crib_key,
+            min_crib_score, avg_crib_score)
+            VALUES (?, ?, ?, ?)
+            """,
+            (hand_key, crib_key,            
+            crib_ranges[0], crib_ranges[1])
+        )
+        elif hand_ranges is not None:
+            cur.execute(
+            f"""
+            INSERT INTO {table_name}
+            (hand_key, crib_key,
+            min_hand_score, max_hand_score, avg_hand_score)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (hand_key, crib_key,
+            hand_ranges[0], hand_ranges[1], hand_ranges[2])
+        )
+
+        
+
+
+
+def calc_crib_ranges_exact(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache):
     """
     Calculate expected crib score by considering all possible opponent discards and starters.
     We need to average over all possible suit combinations for each rank partition.
@@ -254,6 +342,7 @@ def calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_
                     score = crib_score_cache.get(dummy_tuple, None)
                     if score is None:
                         score = score_hand(crib_hand, is_crib=True, starter_card=starter_card)
+                        # update_table(hand_key, crib_key, None, score, conn)
                     
                     total_score_sum += score
                     min_crib = min(min_crib, score)
@@ -264,7 +353,7 @@ def calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_
     return min_crib, crib_avg
 
 
-def process_dealt_hand(args):
+def process_dealt_hand_exact(args):
     dealt_hand, full_deck, hand_score_cache, crib_score_cache = args
     # caches are wrong, force to empty for now
     hand_score_cache = {}
@@ -305,11 +394,11 @@ def process_dealt_hand(args):
             rank_to_suits[rank].add(suit)
 
         # Compute scores
-        scores = calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
+        scores = calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
         scores_np = np.array(scores, dtype=np.float32)
 
         # CRIB SCORES (new optimized calc)
-        min_crib, crib_avg = calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
+        min_crib, crib_avg = calc_crib_ranges_exact(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
         results.append((
             hand_key,
             crib_key,
@@ -335,7 +424,7 @@ def build_hand_stats_parallel(full_deck, hand_score_cache, n_workers=8, batch_si
     cur = conn.cursor()
 
     batch = []
-    for idx, res in enumerate(pool.imap_unordered(process_dealt_hand, args_iter, chunksize=100), 1):
+    for idx, res in enumerate(pool.imap_unordered(process_dealt_hand_exact, args_iter, chunksize=100), 1):
         batch.extend(res)
 
         if idx % 1000 == 0:
@@ -472,6 +561,7 @@ def setup_db(conn):
             min_score INTEGER,
             max_score INTEGER,
             avg_score REAL,
+            min_crib INTEGER,
             avg_crib REAL
         )
         """

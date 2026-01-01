@@ -9,6 +9,9 @@ discarded_cards = build_hand(['9h','10d'])
 full_deck = get_full_deck()
 starter_pool = [c for c in full_deck if c not in dealt_hand]
 
+print(f"Discarded cards: {discarded_cards}")
+print(f"Starter pool size: {len(starter_pool)}")
+
 # The actual crib calculation should be:
 # - Our 2 discards (9H, 10D)
 # - Opponent's 2 discards (from the remaining 46 cards)
@@ -30,3 +33,4 @@ for opp_discard in itertools.combinations(starter_pool, 2):
 
 print(f'Average: {total/count:.2f}, Count: {count}')
 print(f'Expected: 3.80')
+print(f'My function returned: 4.38')

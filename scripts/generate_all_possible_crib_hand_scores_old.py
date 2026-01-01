@@ -136,76 +136,76 @@ def calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_
         rank_to_avail[r] += 1
         rank_to_suits_crib[r].add(c.suit)
 
-    total_ways = math.comb(len(starter_pool), 3)
-    total_rank_sum = 0.0
-    total_flush_ways = 0
+    # Total ways = C(46, 2) * 44 for choosing 2 opponent discards and 1 starter
+    total_ways = math.comb(len(starter_pool), 2) * (len(starter_pool) - 2)
+    total_score_sum = 0.0
     min_crib = float('inf')
 
     for ri1 in range(13):
         for ri2 in range(ri1, 13):
             for ri3 in range(ri2, 13):
                 r1, r2, r3 = rank_list[ri1], rank_list[ri2], rank_list[ri3]
-                # n1 = number of available cards of rank r1 in starter pool
-                # On first iteration ri1 is 0 -> r1 = 'a', if there is 4 aces still in pool then n1=4
                 n1 = rank_to_avail[r1]
                 n2 = rank_to_avail[r2]
                 n3 = rank_to_avail[r3]
 
+                # Need to partition (r1, r2, r3) into "2 for opponent + 1 for starter"
+                # Each partition has different number of ways and potentially different score
+                
+                partitions = []  # List of (opp_ranks, starter_rank, num_ways)
+                
                 if r1 == r2 == r3:
-                    num_ways = math.comb(n1, 3)
+                    # All same: only partition is (r1, r1) for opp, r1 for starter
+                    if n1 >= 3:
+                        partitions.append(([r1, r1], r1, math.comb(n1, 2) * (n1 - 2)))
+                        
                 elif r1 == r2 != r3:
-                    num_ways = math.comb(n1, 2) * n3
+                    # Two r1, one r3
+                    # Partition A: opp gets (r1, r1), starter is r3
+                    if n1 >= 2 and n3 >= 1:
+                        partitions.append(([r1, r1], r3, math.comb(n1, 2) * n3))
+                    # Partition B: opp gets (r1, r3), starter is r1
+                    if n1 >= 2 and n3 >= 1:
+                        partitions.append(([r1, r3], r1, n1 * n3 * (n1 - 1)))
+                        
                 elif r2 == r3 != r1:
-                    num_ways = n1 * math.comb(n2, 2)
+                    # One r1, two r2
+                    # Partition A: opp gets (r2, r2), starter is r1
+                    if n2 >= 2 and n1 >= 1:
+                        partitions.append(([r2, r2], r1, math.comb(n2, 2) * n1))
+                    # Partition B: opp gets (r1, r2), starter is r2
+                    if n1 >= 1 and n2 >= 2:
+                        partitions.append(([r1, r2], r2, n1 * n2 * (n2 - 1)))
+                        
                 else:
-                    num_ways = n1 * n2 * n3
+                    # All different: three partitions
+                    if n1 >= 1 and n2 >= 1 and n3 >= 1:
+                        partitions.append(([r1, r2], r3, n1 * n2 * n3))
+                        partitions.append(([r1, r3], r2, n1 * n3 * n2))
+                        partitions.append(([r2, r3], r1, n2 * n3 * n1))
 
-                if num_ways == 0:
-                    continue
-
-                # Dummy added cards with distinct suits
-                rank_strs = [r1, r2, r3]
-                dummy_added = [Card(rank_strs[k] + suits_list[k]) for k in range(3)]
-                dummy_hand = list(discarded_cards) + dummy_added
-                dummy_tuple = normalize_hand_to_tuple(dummy_hand)
-                dummy_score = crib_score_cache.get(dummy_tuple, None)
-                if dummy_score is None:
-                    dummy_score = score_hand(dummy_hand, is_crib=True)
-
-                # Check if dummy flushed
-                all_suits = [c.suit for c in dummy_hand]
-                if len(set(all_suits)) == 1:
-                    base = dummy_score - 5
-                else:
-                    base = dummy_score
-
-                total_rank_sum += base * num_ways
-
-                # Flush ways
-                num_flush_ways = 0
-                disc_suits = [c.suit for c in discarded_cards]
-                if len(set(disc_suits)) == 1:
-                    s = disc_suits[0]
-                    all_ranks = [c.rank for c in discarded_cards] + rank_strs
-                    if len(set(all_ranks)) == 5:  # distinct ranks for flush possible
-                        can_flush = all(s in rank_to_suits_crib[rs] for rs in rank_strs)
-                        if can_flush:
-                            num_flush_ways = 1
-
-                total_flush_ways += num_flush_ways
-
-                # Min for this multiset
-                if num_flush_ways == num_ways:
-                    this_min = base + 5
-                else:
-                    this_min = base
-                min_crib = min(min_crib, this_min)
+                # Process each partition
+                for opp_ranks, starter_rank, num_ways in partitions:
+                    if num_ways == 0:
+                        continue
+                    
+                    # Create dummy hand: 2 discarded + 2 opponent (distinct suits) + 1 starter
+                    opp_cards = [Card(opp_ranks[i] + suits_list[i]) for i in range(2)]
+                    starter_card = Card(starter_rank + suits_list[2])
+                    crib_hand = list(discarded_cards) + opp_cards
+                    
+                    # Score the crib with the starter
+                    dummy_tuple = normalize_hand_to_tuple(crib_hand + [starter_card])
+                    score = crib_score_cache.get(dummy_tuple, None)
+                    if score is None:
+                        score = score_hand(crib_hand, is_crib=True, starter_card=starter_card)
+                    
+                    total_score_sum += score * num_ways
+                    min_crib = min(min_crib, score)
 
     crib_avg = 0.0
     if total_ways > 0:
-        avg_rank = total_rank_sum / total_ways
-        avg_flush = 5 * total_flush_ways / total_ways
-        crib_avg = avg_rank + avg_flush
+        crib_avg = total_score_sum / total_ways
     return min_crib, crib_avg
 
 

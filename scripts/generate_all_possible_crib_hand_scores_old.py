@@ -1,3 +1,4 @@
+from collections import defaultdict
 import math
 import sqlite3
 import itertools
@@ -8,6 +9,8 @@ import pandas as pd
 # For example:
 import sys
 
+from cribbage.playingcards import Card
+
 sys.path.insert(0, ".")
 sys.path.insert(0, '..')
 from cribbage.database import normalize_hand_to_str, normalize_hand_to_tuple
@@ -17,7 +20,7 @@ import multiprocessing as mp
 
 DB_PATH = "crib_cache.db"
 
-def process_dealt_hand(args):
+def process_dealt_hand_old(args):
     # proper 6 card analysis, 20358520 combinations
     dealt_hand, full_deck, hand_score_cache = args
     dealt_hand = list(dealt_hand)
@@ -50,6 +53,219 @@ def process_dealt_hand(args):
 
     return results
 
+def calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache):
+    # Compute scores
+    scores = []
+    for rank, avail_suits in rank_to_suits.items():
+        if not avail_suits:
+            continue
+        # Dummy for base (suit 'C' arbitrary)
+        # dummy_starter = Card(rank + 'c')
+        # calculate runs, 15s, pairs since these don't care about suit
+        dummy_suit = list(avail_suits)[0]
+        dummy_starter = Card(rank + dummy_suit)
+        dummy_hand = kept_hand + [dummy_starter]
+        dummy_tuple = normalize_hand_to_tuple(dummy_hand)
+        runs_15s_pairs_score = hand_score_cache.get(dummy_tuple, None)  # Fallback if missing
+        if runs_15s_pairs_score is None:
+            runs_15s_pairs_score = score_hand(dummy_hand, is_crib=False)
+
+        # Extras dummy triggered
+        dummy_flush_bonus = 1 if flush_suit == dummy_suit else 0
+        dummy_nobs = 1 if dummy_suit in nobs_suits else 0
+        dummy_flush = flush_base + dummy_flush_bonus
+        # Since we mocked the starter cards suit, we need to remove its contributions
+        # could simplify by not calculatin the full hand score
+        base = runs_15s_pairs_score - dummy_flush - dummy_nobs
+
+        # Per real suit
+        for avail_suit in avail_suits:
+            flush_bonus = 1 if flush_suit == avail_suit else 0
+            nobs = 1 if avail_suit in nobs_suits else 0
+            score = base + flush_base + flush_bonus + nobs
+            scores.append(score)
+    return scores
+
+def process_dealt_hand_only(args):
+    dealt_hand, full_deck, hand_score_cache = args
+    # currently forcing hand score cache to none because there is bugs in it
+    hand_score_cache = {}
+    dealt_hand = list(dealt_hand)
+    results = []
+    discard_combos = itertools.combinations(range(6), 2)
+    for discard_idx in discard_combos:
+        kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
+        discarded_cards = [dealt_hand[i] for i in discard_idx]
+        hand_key = normalize_hand_to_str(kept_hand)
+        starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
+
+        # Flush setup
+        suits = [c.suit for c in kept_hand]
+        flush_potential = len(set(suits)) == 1
+        flush_suit = suits[0] if flush_potential else None
+        flush_base = 4 if flush_potential else 0
+
+        # Nobs setup
+        nobs_suits = set(c.suit for c in kept_hand if c.rank.lower() == 'j')
+
+        # Group starters by rank -> set of available suits
+        from collections import defaultdict
+        # ranks to suits is a dict of rank -> set of suits available of the remaining 46 cards
+        rank_to_suits = defaultdict(set)
+        for starter in starter_pool:
+            rank = starter.rank
+            suit = starter.suit
+            rank_to_suits[rank].add(suit)
+
+        scores = calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
+
+        scores_np = np.array(scores, dtype=np.float32)
+        results.append((
+            hand_key,
+            float(scores_np.min()),
+            float(scores_np.max()),
+            round(float(scores_np.mean()), 2),
+        ))
+    return results
+
+def calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache):
+    rank_to_avail = {r: 0 for r in rank_list}
+    rank_to_suits_crib = {r: set() for r in rank_list}  # renamed to avoid conflict
+    for c in starter_pool:
+        r = c.rank
+        rank_to_avail[r] += 1
+        rank_to_suits_crib[r].add(c.suit)
+
+    total_ways = math.comb(len(starter_pool), 3)
+    total_rank_sum = 0.0
+    total_flush_ways = 0
+    min_crib = float('inf')
+
+    for ri1 in range(13):
+        for ri2 in range(ri1, 13):
+            for ri3 in range(ri2, 13):
+                r1, r2, r3 = rank_list[ri1], rank_list[ri2], rank_list[ri3]
+                # n1 = number of available cards of rank r1 in starter pool
+                # On first iteration ri1 is 0 -> r1 = 'a', if there is 4 aces still in pool then n1=4
+                n1 = rank_to_avail[r1]
+                n2 = rank_to_avail[r2]
+                n3 = rank_to_avail[r3]
+
+                if r1 == r2 == r3:
+                    num_ways = math.comb(n1, 3)
+                elif r1 == r2 != r3:
+                    num_ways = math.comb(n1, 2) * n3
+                elif r2 == r3 != r1:
+                    num_ways = n1 * math.comb(n2, 2)
+                else:
+                    num_ways = n1 * n2 * n3
+
+                if num_ways == 0:
+                    continue
+
+                # Dummy added cards with distinct suits
+                rank_strs = [r1, r2, r3]
+                dummy_added = [Card(rank_strs[k] + suits_list[k]) for k in range(3)]
+                dummy_hand = list(discarded_cards) + dummy_added
+                dummy_tuple = normalize_hand_to_tuple(dummy_hand)
+                dummy_score = crib_score_cache.get(dummy_tuple, None)
+                if dummy_score is None:
+                    dummy_score = score_hand(dummy_hand, is_crib=True)
+
+                # Check if dummy flushed
+                all_suits = [c.suit for c in dummy_hand]
+                if len(set(all_suits)) == 1:
+                    base = dummy_score - 5
+                else:
+                    base = dummy_score
+
+                total_rank_sum += base * num_ways
+
+                # Flush ways
+                num_flush_ways = 0
+                disc_suits = [c.suit for c in discarded_cards]
+                if len(set(disc_suits)) == 1:
+                    s = disc_suits[0]
+                    all_ranks = [c.rank for c in discarded_cards] + rank_strs
+                    if len(set(all_ranks)) == 5:  # distinct ranks for flush possible
+                        can_flush = all(s in rank_to_suits_crib[rs] for rs in rank_strs)
+                        if can_flush:
+                            num_flush_ways = 1
+
+                total_flush_ways += num_flush_ways
+
+                # Min for this multiset
+                if num_flush_ways == num_ways:
+                    this_min = base + 5
+                else:
+                    this_min = base
+                min_crib = min(min_crib, this_min)
+
+    crib_avg = 0.0
+    if total_ways > 0:
+        avg_rank = total_rank_sum / total_ways
+        avg_flush = 5 * total_flush_ways / total_ways
+        crib_avg = avg_rank + avg_flush
+    return min_crib, crib_avg
+
+
+def process_dealt_hand(args):
+    dealt_hand, full_deck, hand_score_cache, crib_score_cache = args
+    # caches are wrong, force to empty for now
+    hand_score_cache = {}
+    crib_score_cache = {}
+    dealt_hand = list(dealt_hand)
+    rank_list = ['a', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k']
+    suits_list = ['c', 'd', 'h', 's']
+    results = []
+
+    # all 2-card discards from the 6-card dealt hand
+    discard_combos = itertools.combinations(range(6), 2)
+
+    for discard_idx in discard_combos:
+        kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
+        discarded_cards = [dealt_hand[i] for i in discard_idx]
+
+        hand_key = normalize_hand_to_str(kept_hand)
+        crib_key = normalize_hand_to_str(discarded_cards)
+
+        # starter cannot be any of the discarded cards
+        starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
+
+        # HAND SCORES (existing optimized code)
+        # Flush setup
+        suits = [c.suit for c in kept_hand]
+        flush_potential = len(set(suits)) == 1
+        flush_suit = suits[0] if flush_potential else None
+        flush_base = 4 if flush_potential else 0
+
+        # Nobs setup
+        nobs_suits = set(c.suit for c in kept_hand if c.rank.lower() == 'j')
+
+        # Group starters by rank -> set of available suits
+        rank_to_suits = defaultdict(set)
+        for starter in starter_pool:
+            rank = starter.rank
+            suit = starter.suit
+            rank_to_suits[rank].add(suit)
+
+        # Compute scores
+        scores = calc_hand_ranges(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
+        scores_np = np.array(scores, dtype=np.float32)
+
+        # CRIB SCORES (new optimized calc)
+        min_crib, crib_avg = calc_crib_ranges(rank_list, starter_pool, suits_list, discarded_cards, crib_score_cache)
+        results.append((
+            hand_key,
+            crib_key,
+            float(scores_np.min()),
+            float(scores_np.max()),
+            round(float(scores_np.mean()), 2),
+            float(min_crib),
+            round(float(crib_avg), 2),
+        ))
+
+    return results
 
 def build_hand_stats_parallel(full_deck, hand_score_cache, n_workers=8, batch_size=2000):
     # proper 6 card analysis, 20358520 combinations
@@ -345,7 +561,7 @@ def get_remaining_cards(full_deck, dealt_hand):
     return list(set(full_deck) - set(dealt_hand))        
 
 
-def build_hand_stats_approx_table(hand_score_cache, full_deck, db_path=DB_PATH, batch_size=5000):
+def build_hand_stats_approx_table(full_deck, db_path=DB_PATH, batch_size=5000):
 
     # doesn't account for the starter card not being in the 6 cards we were dealt
     table_name = "hand_stats_approx"
@@ -380,9 +596,11 @@ def build_hand_stats_approx_table(hand_score_cache, full_deck, db_path=DB_PATH, 
         scores = []
 
         # opponent contributes 2 cards + starter
-        for starter in remaining:            
-            five = normalize_hand_to_tuple(hand + [starter])
-            scores.append(hand_score_cache[five])
+        for starter in remaining:    
+            # TODO: this step is incorrect because it changes which card is the starter
+            # raise ValueError("This function is incorrect, needs fixing")
+            score = score_hand(hand, is_crib=False, starter_card=starter)
+            scores.append(score)
 
         records.append({
             "hand_key": row.hand_key,
@@ -479,8 +697,7 @@ def delete_table(table_name, conn=None):
     conn.commit()
 
 def build_crib_stats_approx_table(
-    full_deck,
-    crib_score_cache,
+    full_deck,    
     db_path=DB_PATH,
     batch_size=5000,
 ):
@@ -518,23 +735,23 @@ def build_crib_stats_approx_table(
         scores = []
 
         # opponent contributes 2 cards + starter
-        for opp2 in itertools.combinations(remaining, 3):
+        for opp2 in itertools.combinations(remaining, 2):
             rest = [c for c in remaining if c not in opp2]
-            five = normalize_hand_to_tuple(crib + list(opp2))
-            scores.append(crib_score_cache[five])
+            for starter in rest:                
+                scores.append(score_hand(crib + list(opp2), is_crib=True, starter_card=starter))
 
-        records.append({
-            "hand_key": row.hand_key,
-            "min_score": min(scores),
-            "max_score": max(scores),
-            "avg_score": round(sum(scores) / len(scores), 2)
-        })
+                records.append({
+                    "hand_key": row.hand_key,
+                    "min_score": min(scores),
+                    "max_score": max(scores),
+                    "avg_score": round(sum(scores) / len(scores), 2)
+                })
 
-        if len(records) >= batch_size:
-            pd.DataFrame(records).to_sql(
-                table_name, conn, if_exists="append", index=False
-            )
-            records.clear()
+            if len(records) >= batch_size:
+                pd.DataFrame(records).to_sql(
+                    table_name, conn, if_exists="append", index=False
+                )
+                records.clear()
 
     if records:
         pd.DataFrame(records).to_sql(
@@ -550,10 +767,13 @@ def build_crib_stats_approx_table(
 
 if __name__ == "__main__":
     full_deck = get_full_deck()
-    build_5_card_hand_score_table(full_deck) # done   
+    build_hand_stats_approx_table(full_deck, db_path=DB_PATH)
+    # build_crib_stats_approx_table(full_deck, db_path=DB_PATH)
+
+
+    # build_5_card_hand_score_table(full_deck) # done   
     # build_kept_stats_pandas(hand_score_cache) # done
-    hand_score_cache = load_all_5_card_scores(sqlite3.connect(DB_PATH)) # done
-    build_hand_stats_approx_table(hand_score_cache, full_deck, db_path=DB_PATH)
+    # hand_score_cache = load_all_5_card_scores(sqlite3.connect(DB_PATH)) # done    
     # done - build_exact_full_hand_stats_pandas(full_deck, hand_score_cache, db_path=DB_PATH, batch_size=5000)
 
 

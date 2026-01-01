@@ -74,7 +74,7 @@ logger = logging.getLogger(__name__)
 #     logger.info("\n" + df3[["hand_key", "crib_key", "min_score_hand", "max_score_hand", "avg_score_hand", "avg_score_crib", "avg_score"]].sort_values(by="avg_score", ascending=False).to_string())
 #     return df3
 
-def get_6_card_stats_df(hand, dealer_is_self): 
+def get_6_card_stats_df_from_db(hand, dealer_is_self): 
     hand_keys = []
     crib_keys = []
     df = pd.DataFrame(columns=["key", "hand_key","crib_key","min_score", "max_score", "avg_score_approx"])
@@ -125,7 +125,7 @@ class MediumPlayer(BeginnerPlayer):
         super().__init__(name=name)
 
     def select_crib_cards(self, hand, dealer_is_self):                
-        df3 = get_6_card_stats_df(hand, dealer_is_self)
+        df3 = get_6_card_stats_df_from_db(hand, dealer_is_self)
         best_discards_str = df3.loc[df3["avg_score_approx"] == df3["avg_score_approx"].max()]["crib_key"].values[0]
         best_discards = best_discards_str.lower().replace("t", "10").split("|")
         best_discards_cards = build_hand(best_discards)

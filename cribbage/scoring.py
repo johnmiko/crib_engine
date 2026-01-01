@@ -19,18 +19,17 @@ class JackMatchStarterSuitScorer(ScoreCondition):
     """
     Awards 1 point if there is a jack in the hand and its suit matches the starter card's suit.
     """    
-    def check(self, hand_and_starter):
-        starter = hand_and_starter[-1]  # assuming last card is the starter
-        hand = hand_and_starter[:-1]
-        
-        starter_suit = starter.suit
+    def check(self, hand, starter=None):
+        starter_suit = starter.suit if starter else None
         for card in hand:
             if card.rank.lower() == 'j' and card.suit == starter_suit:                
                 return 1, "Jack match starter suit"
         return 0, "" 
 
 class HasPairTripleQuad(ScoreCondition):
-    def check(self, cards):
+    def check(self, cards, starter=None):
+        if starter:
+            cards = cards + [starter]
         description = None
         pair_rank = ""
         same, score = 0, 0
@@ -55,7 +54,9 @@ class HasPairTripleQuad(ScoreCondition):
 
 class HasPairs_InHand(ScoreCondition):
     """Find all pairs/triples/quads in a hand (not just consecutive)."""
-    def check(self, cards):
+    def check(self, cards, starter=None):
+        if starter:
+            cards = cards + [starter]
         if len(cards) < 2:
             return 0, ""
         
@@ -89,7 +90,9 @@ class ExactlyEqualsN(ScoreCondition):
         self.n = n
         super().__init__()
 
-    def check(self, cards):
+    def check(self, cards, starter=None):
+        if starter:
+            cards = cards + [starter]
         value = sum(i.get_value() for i in cards)
         if value == self.n:
             # ACC rules give 2 for 15; treat 31 as 1 to avoid double-counting with last-card point
@@ -124,7 +127,9 @@ class HasStraight_InHand(ScoreCondition):
         return straights_deduped
 
     @classmethod
-    def check(cls, cards):
+    def check(cls, cards, starter=None):
+        if starter:
+            cards = cards + [starter]
         description = ""
         points = 0
         straights = cls._enumerate_straights(cards)
@@ -158,7 +163,9 @@ class CountCombinationsEqualToN(ScoreCondition):
         self.n = n
         super().__init__()
 
-    def check(self, cards):
+    def check(self, cards, starter=None):
+        if starter:
+            cards = cards + [starter]
         n_counts, score = 0, 0
         cmb_list = []
         card_values = [card.get_value() for card in cards]
@@ -172,12 +179,12 @@ class CountCombinationsEqualToN(ScoreCondition):
 
 
 class HasFlush(ScoreCondition):
-    def __init__(self, is_crib: bool = False, starter_card=None):
+    def __init__(self, is_crib: bool = False):
         super().__init__()
         self.is_crib = is_crib
-        self.starter_card = starter_card
 
-    def check(self, cards):
+    def check(self, cards, starter=None):
+        self.starter_card = starter
         logger.debug("Checking flush for cards: %s", cards)
         logger.debug("length of cards: %d", len(cards))
         if len(cards) < 4:
@@ -227,6 +234,8 @@ def score_play(card_seq):
     score = 0
     score_scenarios = [ExactlyEqualsN(n=15), ExactlyEqualsN(n=31),
                         HasPairTripleQuad(), HasStraight_DuringPlay()]
+    
+    
     for scenario in score_scenarios:
         s, desc = scenario.check(card_seq[:])
         score += s
@@ -242,12 +251,17 @@ def score_hand(cards, is_crib: bool = False, starter_card=None):
     :return: Points earned by player.
     """
     score = 0
-    if starter_card is None and len(cards) == 5:
+    if len(cards) == 5 and starter_card is None:
+        # Assume last card is starter if not provided
         starter_card = cards[-1]
+        cards = cards[:-1]
+    if starter_card in cards:
+        # Exclude starter for flush check
+        cards = [c for c in cards if c != starter_card]
     score_scenarios = [CountCombinationsEqualToN(n=15), JackMatchStarterSuitScorer(),
-                        HasPairs_InHand(), HasStraight_InHand(), HasFlush(is_crib=is_crib, starter_card=starter_card)]
+                        HasPairs_InHand(), HasStraight_InHand(), HasFlush(is_crib=is_crib)]
     for scenario in score_scenarios:
-        s, desc = scenario.check(cards[:])
+        s, desc = scenario.check(cards[:], starter=starter_card)
         score += s
         if desc:
             logger.debug("[EOR SCORING] " + desc)

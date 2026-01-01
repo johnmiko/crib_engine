@@ -1,5 +1,11 @@
-Need to check that test_medium_player passes
+The scoring's just literally not correct
 
+
+Need to check that test_medium_player passes
+    hand_scores table is not correct, well cards in hand 3H|4H|5H|6H
+    but in the scores table AS|3H|4H|5H|6H = 8 because starter is 6H
+    So the hand_scores is not wrong, but maybe doesn't include everything, I dunno
+    I look up hand_stats_approx hand_key="3H|4H|5H|6H" which has the wrong min score
 
 after 1 game, average pegging 3.4, average hand 7.1
 

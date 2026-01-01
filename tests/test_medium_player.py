@@ -75,14 +75,14 @@ def test_get_6_card_stats_df():
 
 
 def test_avg_score_approx_is_reasonable():
-    # check that my approx average scores are reasonable vs exact values according to crib app
+    # check that my approx average scores are reasonable vs exact values (brute force calculated)
     tolerance = 0.1    
     hand = build_hand(["5h","6c","7d","9h","2h","10d"])
     df = get_6_card_stats_df_from_db(hand, dealer_is_self=False)
     df2 = df.sort_values(by="avg_score_approx", ascending=False)
     df_exact = pd.DataFrame({"hand_key":['5H|6C|7D|9H', '5H|6C|7D|TD', '2H|5H|6C|7D','5H|6C|9H|TD', '2H|5H|6C|9H', '5H|7D|9H|TD', '2H|5H|6C|TD', '2H|5H|9H|TD', '2H|5H|7D|9H', '2H|6C|7D|9H', '2H|5H|7D|TD', '6C|7D|9H|TD', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD'],
                              "avg_hand_score_exact": [8.11, 7.85, 8.46, 6.89, 4.85, 4.76, 4.67, 4.65, 2.93, 6.07, 4.5, 4.11, 3.98, 3.91, 2.04],
-                             "avg_crib_score_exact": [3.03, 3.13, 3.80, 3.24, 2.73, 3.32, 3.31, 4.50, 2.80, 5.98, 4.53, 4.76, 4.73, 5.37, 6.05]})
+                             "avg_crib_score_exact": [4.10, 4.17, 4.84, 4.24, 3.67, 4.21, 4.31, 5.37, 3.60, 7.21, 5.53, 5.94, 5.76, 6.43, 7.10]})
     df2 = pd.merge(df2, df_exact, left_on="hand_key", right_on="hand_key")
     df2["avg_hand_score_diff"] = df2["avg_score_hand_approx"] - df2["avg_hand_score_exact"]
     df2["avg_crib_score_diff"] = df2["avg_score_crib_approx"] - df2["avg_crib_score_exact"]
@@ -194,14 +194,12 @@ def test_calc_crib_ranges_works_correctly():
     discard_combos = itertools.combinations(range(6), 2)
 
     for discard_idx in discard_combos:
+        logger.info(f"Processing discard idx: {discard_idx}")
         kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
         discarded_cards = [dealt_hand[i] for i in discard_idx]
 
         hand_key = normalize_hand_to_str(kept_hand)
         crib_key = normalize_hand_to_str(discarded_cards)
-        # temp to help with debugging
-        if hand_key != "2H|5H|6C|7D":
-            continue
         # starter cannot be any of the discarded cards
         starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
 
@@ -222,11 +220,12 @@ def test_calc_crib_ranges_works_correctly():
             round(float(crib_avg), 2),
         ))
     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key", "min_crib_score","avg_crib_score"])      
-    df_expected = pd.DataFrame({"hand_key":['5H|6C|7D|9H', '5H|6C|7D|TD', '2H|5H|6C|7D','5H|6C|9H|TD', '2H|5H|6C|9H', '5H|7D|9H|TD', '2H|5H|6C|TD', '2H|5H|9H|TD', '2H|5H|7D|9H', '2H|6C|7D|9H', '2H|5H|7D|TD', '6C|7D|9H|TD', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD'],                             
-                             "avg_crib_score_exact": [3.03, 3.13, 3.80, 3.24, 2.73, 3.32, 3.31, 4.50, 2.80, 5.98, 4.53, 4.76, 4.73, 5.37, 6.05]})
+    # the exact crib scores were calculated using the script calculate_exact_crib_values_by_brute_force.py
+    df_expected = pd.DataFrame({"hand_key":['2H|5H|6C|7D', '2H|5H|6C|9H', '2H|5H|6C|TD', '2H|5H|7D|9H', '2H|5H|7D|TD', '2H|5H|9H|TD', '2H|6C|7D|9H', '2H|6C|7D|TD', '2H|6C|9H|TD', '2H|7D|9H|TD', '5H|6C|7D|9H', '5H|6C|7D|TD', '5H|6C|9H|TD', '5H|7D|9H|TD', '6C|7D|9H|TD'],
+                             "avg_crib_score_exact": [4.84, 3.67, 4.31, 3.6, 5.53, 5.37, 7.21, 5.76, 6.43, 7.1, 4.1, 4.17, 4.24, 4.21, 5.94]})
     df2 = pd.merge(df_processed, df_expected, left_on="hand_key", right_on="hand_key")    
     df2["avg_crib_score_diff"] = df2["avg_crib_score"] - df2["avg_crib_score_exact"]    
-    bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(0, 0.01), "avg_crib_score_diff"]    
+    bad_crib_approxes = df2.loc[~df2["avg_crib_score_diff"].between(-0.01, 0.01), "avg_crib_score_diff"]
     df3 = df2.loc[~df2["avg_crib_score_diff"].between(0, 0.01)]    
     df3 = df3.sort_values(by="avg_crib_score_exact", ascending=False)
     logger.info(f"\n{df3[["hand_key","crib_key", "avg_crib_score","avg_crib_score_exact", "avg_crib_score_diff"]]}")

@@ -45,3 +45,28 @@ def test_crib_has_flush_is_correct():
     kept_key = "AH|2H|9H|10H|kh"
     score = score_hand(build_hand(kept_key), is_crib=True, starter_card=None)
     assert score == 5
+
+def test_jack_matches_starter_suit_in_crib():
+    kept_key = "jH|jc|js|jd|kh"
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=None)
+    assert score == 13
+    kept_key = "jH|jc|js|jd"
+    starter_card = Card("kh")
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=starter_card)
+    assert score == 13
+    kept_key = "jH|ac|8s|9d|kh"
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=None)
+    assert score == 1
+    kept_key = "jH|ac|8s|9d"
+    starter_card = Card("kh")
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=starter_card)
+    assert score == 1
+    kept_key = "jc|ac|8s|9d|kh"
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=None)
+    assert score == 0
+    kept_key = "jc|ac|8s|9d"
+    starter_card = Card("kh")
+    score = score_hand(build_hand(kept_key), is_crib=True, starter_card=starter_card)
+    assert score == 0
+
+

@@ -4,9 +4,10 @@ version = "1.0.0"
 description = "Shared cribbage game logic"
 requires-python = ">=3.9"
 dependencies = [
-    "pytest>=9.0.2",
     "pydantic>=2.12.5"
 ]
+[project.optional-dependencies]
+dev = ["pytest>=9.0.2"]
 
 [build-system]
 requires = ["setuptools>=61"]

@@ -36,59 +36,6 @@ value_map = {
     'q': 10,
     'k': 10
 }
-
-
-class Deck:
-    RANKS = ['a','2','3','4','5','6','7','8','9','10','j','q','k']
-    SUITS = ['h','d','c','s']  # hearts, diamonds, clubs, spades
-
-    def __init__(self, seed: int | None = None):
-        self._rng = random.Random(seed)
-        self.cards = [Card(f"{r}{s}") for r in self.RANKS for s in self.SUITS]
-        self.shuffle()
-
-    def __len__(self):
-        return len(self.cards)
-
-    def draw(self):
-        return self.cards.pop() if self.cards else None
-
-    def shuffle(self):
-        self._rng.shuffle(self.cards)
-
-    def cut(self, cut_point=None):
-        len_precut = len(self.cards)
-        if cut_point is None:
-            cut_point = self._rng.randrange(len(self.cards))
-        self.cards = self.cards[cut_point:] + self.cards[:cut_point]
-        assert len(self.cards) == len_precut, "Cards lost in cut."
-
-    def to_index(self) -> int:
-        return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]
-
-def get_random_hand(num_cards: int = 6, seed: int | None = None):
-    deck = Deck(seed=seed)
-    hand = []
-    for _ in range(num_cards):
-        hand.append(deck.draw())
-    return hand    
-
-def build_hand(card_str_list: List[str] | str) -> List[Card]:
-    # accepts arguments such as
-    # ["3h","4c","5d","6h","7h","8d"]
-    # or "3h,4c,5d,6h,7h,8d"
-    # or "3h|4c|5d|6h|7h|8d"
-    hand_list = []
-    if isinstance(card_str_list, str):
-        card_str_list = card_str_list.lower().replace("t","10")
-        if "|" in card_str_list:
-            card_str_list = card_str_list.split("|")
-        else:
-            card_str_list = card_str_list.split(",")
-    for card_str in card_str_list:
-        hand_list.append(Card(card_str))
-    return hand_list    
-
 class Card:
     def __init__(self, rank_and_suit):
         # Support both single and double character ranks (e.g., '10h')
@@ -159,6 +106,59 @@ class Card:
     
     def to_index(self) -> int:
         return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]
+
+
+
+class Deck:
+    RANKS = ['a','2','3','4','5','6','7','8','9','10','j','q','k']
+    SUITS = ['h','d','c','s']  # hearts, diamonds, clubs, spades
+
+    def __init__(self, seed: int | None = None):
+        self._rng = random.Random(seed)
+        self.cards = [Card(f"{r}{s}") for r in self.RANKS for s in self.SUITS]
+        self.shuffle()
+
+    def __len__(self):
+        return len(self.cards)
+
+    def draw(self):
+        return self.cards.pop() if self.cards else None
+
+    def shuffle(self):
+        self._rng.shuffle(self.cards)
+
+    def cut(self, cut_point=None):
+        len_precut = len(self.cards)
+        if cut_point is None:
+            cut_point = self._rng.randrange(len(self.cards))
+        self.cards = self.cards[cut_point:] + self.cards[:cut_point]
+        assert len(self.cards) == len_precut, "Cards lost in cut."
+
+    def to_index(self) -> int:
+        return SUIT_TO_I[self.suit] * 13 + RANK_TO_I[self.rank]
+
+def get_random_hand(num_cards: int = 6, seed: int | None = None):
+    deck = Deck(seed=seed)
+    hand = []
+    for _ in range(num_cards):
+        hand.append(deck.draw())
+    return hand    
+
+def build_hand(card_str_list: List[str] | str) -> List[Card]:
+    # accepts arguments such as
+    # ["3h","4c","5d","6h","7h","8d"]
+    # or "3h,4c,5d,6h,7h,8d"
+    # or "3h|4c|5d|6h|7h|8d"
+    hand_list = []
+    if isinstance(card_str_list, str):
+        card_str_list = card_str_list.lower().replace("t","10")
+        if "|" in card_str_list:
+            card_str_list = card_str_list.split("|")
+        else:
+            card_str_list = card_str_list.split(",")
+    for card_str in card_str_list:
+        hand_list.append(Card(card_str))
+    return hand_list    
 
 RANK_TO_I = {r:i for i,r in enumerate(Deck.RANKS)}
 SUIT_TO_I = {s:i for i,s in enumerate(Deck.SUITS)}

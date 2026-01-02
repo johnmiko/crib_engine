@@ -416,3 +416,33 @@ def calc_crib_ranges_fast_given_6_cards(dealt_hand):
             round(float(crib_avg), 2),
         ))
     return results
+
+def calc_crib_min_only_given_6_cards(dealt_hand):        
+    full_deck = get_full_deck()    
+    # caches are wrong, force to empty for now
+    hand_score_cache = {}
+    crib_score_cache = {}
+    rank_list = ['a', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'j', 'q', 'k']
+    suits_list = ['c', 'd', 'h', 's']
+    results = []
+
+    # all 2-card discards from the 6-card dealt hand
+    discard_combos = itertools.combinations(range(6), 2)    
+    for discard_idx in discard_combos:
+        kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
+        discarded_cards = [dealt_hand[i] for i in discard_idx]
+
+        hand_key = normalize_hand_to_str(kept_hand)
+        crib_key = normalize_hand_to_str(discarded_cards)
+        # starter cannot be any of the discarded cards
+        min_crib = score_hand(discarded_cards, is_crib=True)
+        avg_crib = min_crib
+        if "j" in crib_key.lower():
+            avg_crib += 0.25
+        results.append((
+            hand_key,
+            crib_key,
+            float(min_crib),
+            float(avg_crib),
+        ))
+    return results

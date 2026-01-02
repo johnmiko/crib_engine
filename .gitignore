@@ -1,4 +1,6 @@
 *.egg-info/
 *.pyc
+*.log
 crib_cache.db
 scripts/temp_db_script_thing.py
+.idea/

@@ -110,9 +110,14 @@ class CribbageRound:
 
         :return: None
         """        
-        # for p in self.game.players:
+        player_scores_dict = {}
         for pi, player in self.game.players_dict.items():
-            cards_to_crib = player.select_crib_cards(self.hands[pi], dealer_is_self=(player == self.dealer))
+            player_scores_dict[player.name] = self.game.board.get_score(player)
+        for pi, player in self.game.players_dict.items():                        
+            player_score = player_scores_dict[player.name]
+            other_player_name = [next(name for name in player_scores_dict.keys() if name != player.name)]
+            opponent_score = player_scores_dict[other_player_name[0]]
+            cards_to_crib = player.select_crib_cards(self.hands[pi], dealer_is_self=(player == self.dealer), your_score=player_score, opponent_score=opponent_score)
             logger.debug(f"{player.name} cribs: {cards_to_crib} when dealt hand {self.hands[pi]}")
             if not set(cards_to_crib).issubset(set(self.hands[pi])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
@@ -194,6 +199,7 @@ class CribbageRound:
                     # logger.debug(f"{self.table=}")
                     # logger.debug(f"table is {self.table}")
                     count = self.get_table_value(sequence_start_idx) 
+
                     card = player.select_card_to_play(hand=self.hands[player.name], table=self.table[sequence_start_idx:],
                                                  crib=self.crib, count=count)
                     logger.debug(f"Player {player.name} selected card {card} with count {count}")

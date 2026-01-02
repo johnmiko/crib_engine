@@ -14,6 +14,9 @@ class BasePlayer(metaclass=ABCMeta):
 
     def __repr__(self):
         return str(self)
+    
+    def get_name(self) -> str:
+        return self.name
 
     @abstractmethod
     def select_crib_cards(self, hand):

@@ -9,7 +9,8 @@ import pandas as pd
 # For example:
 import sys
 
-from cribbage.crib_strategies import calc_crib_ranges_exact_and_slow
+from cribbage.strategies.crib_strategies import calc_crib_ranges_exact_and_slow
+from cribbage.strategies.hand_strategies import calc_hand_ranges_exact
 from cribbage.playingcards import Card
 
 sys.path.insert(0, ".")
@@ -52,81 +53,6 @@ def process_dealt_hand_old(args):
             round(float(scores.mean()), 2),
         ))
 
-    return results
-
-def calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache):
-    # Compute scores
-    scores = []
-    for rank, avail_suits in rank_to_suits.items():
-        if not avail_suits:
-            continue
-        # Dummy for base (suit 'C' arbitrary)
-        # dummy_starter = Card(rank + 'c')
-        # calculate runs, 15s, pairs since these don't care about suit
-        dummy_suit = list(avail_suits)[0]
-        dummy_starter = Card(rank + dummy_suit)
-        dummy_hand = kept_hand + [dummy_starter]
-        dummy_tuple = normalize_hand_to_tuple(dummy_hand)
-        runs_15s_pairs_score = hand_score_cache.get(dummy_tuple, None)  # Fallback if missing
-        if runs_15s_pairs_score is None:
-            runs_15s_pairs_score = score_hand(dummy_hand, is_crib=False)
-
-        # Extras dummy triggered
-        dummy_flush_bonus = 1 if flush_suit == dummy_suit else 0
-        dummy_nobs = 1 if dummy_suit in nobs_suits else 0
-        dummy_flush = flush_base + dummy_flush_bonus
-        # Since we mocked the starter cards suit, we need to remove its contributions
-        # could simplify by not calculatin the full hand score
-        base = runs_15s_pairs_score - dummy_flush - dummy_nobs
-
-        # Per real suit
-        for avail_suit in avail_suits:
-            flush_bonus = 1 if flush_suit == avail_suit else 0
-            nobs = 1 if avail_suit in nobs_suits else 0
-            score = base + flush_base + flush_bonus + nobs
-            scores.append(score)
-    return scores
-
-def process_dealt_hand_only_exact(args):
-    dealt_hand, full_deck, hand_score_cache = args
-    # currently forcing hand score cache to none because there is bugs in it
-    hand_score_cache = {}
-    dealt_hand = list(dealt_hand)
-    results = []
-    discard_combos = itertools.combinations(range(6), 2)
-    for discard_idx in discard_combos:
-        kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
-        discarded_cards = [dealt_hand[i] for i in discard_idx]
-        hand_key = normalize_hand_to_str(kept_hand)
-        starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
-
-        # Flush setup
-        suits = [c.suit for c in kept_hand]
-        flush_potential = len(set(suits)) == 1
-        flush_suit = suits[0] if flush_potential else None
-        flush_base = 4 if flush_potential else 0
-
-        # Nobs setup
-        nobs_suits = set(c.suit for c in kept_hand if c.rank.lower() == 'j')
-
-        # Group starters by rank -> set of available suits
-        from collections import defaultdict
-        # ranks to suits is a dict of rank -> set of suits available of the remaining 46 cards
-        rank_to_suits = defaultdict(set)
-        for starter in starter_pool:
-            rank = starter.rank
-            suit = starter.suit
-            rank_to_suits[rank].add(suit)
-
-        scores = calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
-
-        scores_np = np.array(scores, dtype=np.float32)
-        results.append((
-            hand_key,
-            float(scores_np.min()),
-            float(scores_np.max()),
-            round(float(scores_np.mean()), 2),
-        ))
     return results
 
 
@@ -216,7 +142,7 @@ def update_table(hand_key, crib_key, hand_ranges=None, crib_ranges=None, conn=No
         
 
 
-def process_dealt_hand_exact(args):
+def process_crib_and_hand_exact(args):
     dealt_hand, full_deck, hand_score_cache, crib_score_cache = args
     # caches are wrong, force to empty for now
     hand_score_cache = {}
@@ -287,7 +213,7 @@ def build_hand_stats_parallel(full_deck, hand_score_cache, n_workers=8, batch_si
     cur = conn.cursor()
 
     batch = []
-    for idx, res in enumerate(pool.imap_unordered(process_dealt_hand_exact, args_iter, chunksize=100), 1):
+    for idx, res in enumerate(pool.imap_unordered(process_crib_and_hand_exact, args_iter, chunksize=100), 1):
         batch.extend(res)
 
         if idx % 1000 == 0:

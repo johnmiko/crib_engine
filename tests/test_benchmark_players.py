@@ -45,14 +45,15 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 
 # @pytest.mark.very_slow
 def test_beginner_vs_medium_player():
-    num_games = 100
+    num_games = 300
     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
     medium_player = MediumPlayer(name="MediumPlayer")    
     results = play_multiple_games(num_games, p0=medium_player, p1=beginner_player)    
-    wins, diffs, winrate, lo, hi = results["wins"], results["diffs"], results["winrate"], results["ci_lo"], results["ci_hi"]    
-    win_rate = wins / num_games
-    logger.info(f"diffs: {diffs}")
-    logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%})")
+    wins, diffs, win_rate, lo, hi = results["wins"], results["diffs"], results["winrate"], results["ci_lo"], results["ci_hi"]    
+    # win_rate = wins / num_games
+    average_pegging_diff = sum(diffs) / len(diffs)
+    logger.info(f"Average pegging score difference (medium - beginner): {average_pegging_diff:.2f}")    
+    logger.info(f"medium_player wins: {wins}/{num_games} ({win_rate:.2%} CI: {lo:.2%}-{hi:.2%})")
     assert win_rate > 0.5, "medium_player should win at least 63% of the time against BeginnerPlayer"    
 
 def test_beginner_vs_medium_crib_discards_all_hands():    
@@ -75,8 +76,8 @@ def test_beginner_vs_medium_crib_discards_only_where_discards_are_different():
         df[["medium_discard", "beginner_discard"]]
         .apply(lambda col: col.str.split(",").apply(lambda x: ",".join(sorted(x))))
     )
-    df2 = df[df["medium_discard"] != df["beginner_discard"]]
-    df2["score_dif"] = df2["medium_score"] - df2["beginner_score"]
+    df["score_dif"] = df["medium_score"] - df["beginner_score"]
+    df2 = df[df["medium_discard"] != df["beginner_discard"]]    
     total_score_dif = df2["score_dif"].sum()
     avg_score_dif = df2["score_dif"].mean()
     logger.info(f"Average score difference over {len(df2)} hands: {avg_score_dif:.2f}")

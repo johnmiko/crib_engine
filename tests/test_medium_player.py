@@ -3,8 +3,9 @@ import time
 import itertools
 import numpy as np
 import pytest
-from cribbage.crib_strategies import calc_crib_ranges_almost_exact, calc_crib_ranges_exact_and_slow, calc_crib_ranges_fast
+from cribbage.strategies.crib_strategies import calc_crib_ranges_almost_exact, calc_crib_ranges_exact_and_slow, calc_crib_ranges_fast
 from cribbage.database import normalize_hand_to_str
+from cribbage.strategies.hand_strategies import process_dealt_hand_only_exact
 from cribbage.players.medium_player import MediumPlayer
 from cribbage.players.rule_based_player import get_full_deck
 from cribbage.playingcards import build_hand
@@ -18,7 +19,7 @@ from cribbage.playingcards import Card
 import pandas as pd
 import logging
 
-from scripts.generate_all_possible_crib_hand_scores import process_dealt_hand_exact, process_dealt_hand_only_exact
+from scripts.generate_all_possible_crib_hand_scores import process_crib_and_hand_exact
 
 
 logger = logging.getLogger(__name__)
@@ -167,7 +168,7 @@ def test_process_dealt_hand_and_crib_works_correctly():
     # a = 1 
     tolerance = 0.1 
     hand = build_hand(["5h","6c","7d","9h","2h","10d"])
-    results = process_dealt_hand_exact([hand, full_deck, hand_score_cache, crib_score_cache])
+    results = process_crib_and_hand_exact([hand, full_deck, hand_score_cache, crib_score_cache])
     df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score", "min_crib_score","avg_crib_score"])
     # df_processed = pd.DataFrame(results, columns=["hand_key","crib_key","min_score","max_score","avg_hand_score"])
     # df = get_6_card_stats_df_from_db(hand, dealer_is_self=False)

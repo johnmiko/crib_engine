@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
     # I can manually look at them, but what about the crib? If they have the same hand, the crib doesn't make any sense
     # I will put 2 random cards in the crib I guess? But that's assuming they have the same discards
 filename = "discards_differ.log"
-num_hands = 1000    
+num_hands = 500    
 beginner_player = BeginnerPlayer(name="BeginnerPlayer")
 medium_player = MediumPlayer(name="MediumPlayer")
 header = "dealt,starter,beginner_discard,medium_discard,beginner_crib,medium_crib,beginner_hand,beginner_score,medium_hand,medium_score,dealer_is_self\n"

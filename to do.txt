@@ -1,11 +1,34 @@
-test_medium_player
-    need to delete the tests that I'm not using anymore 
-medium_player_discard_strat
-    hand_stats = query "hand_stats" table, check if values are already calculated
-    for missing_data in hand_stats:
-        row = process_dealt_hand()
-        update_table
-    discards = hand_stats +/- crib values
+running on 8001
+- get everything working, check that a game is saved to the database
+- play against the beginner player, see if you can actually win or not
+
+- we'll see how fast the exact one is calculating
+    - can probably do something clever with the 4 card one
+    - problem, given 6 cards, calculate the hand avearge of the 4 cards discarding all 15 combinatios of 2 cards
+    - probsem 2, doing it this way causes 20 million rows when we have each row as the 6 card combination
+    - with 4 cards it's only 200 000
+    - so imagine we have the 4 card combinations way
+        Initially for each 4 card combination we added ecah possible starter card, got the min,max and average of the hand
+        Can we create now a pandas group where 2 of the starter cards are not included in each group
+
+
+# python .\scripts\generate_il_data.py --games 10000 --out_dir "il_datasets/"
+# python .\scripts\train_linear_models.py --data_dir "il_datasets/" --out_dir models --epochs 20
+# python scripts/benchmark_neural_vs_reasonable.py --games 500 --models_dir models
+
+Need to test that seeded cribbage game does not play the same game every round
+
+
+
+testing strategies
+    because using statistics increases average pegging points only by about 2
+    where starting with crib increase it by about 6 to 7
+    then using statistics the whole time is worse because it doesn't account for the end of the game
+
+    something wrong with my min_total_score calculation, should be winning 50% of the time against beginner player
+    need to run find_strategy_discard_differences.py, then check
+
+    start experiments folder 
 
 
 Need to check that test_medium_player passes

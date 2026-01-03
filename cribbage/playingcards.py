@@ -30,12 +30,28 @@ rank_name_map = {
     'q': 'queen',
     'k': 'king'}
 
+rank_order_map = {
+    'a': 1,    
+    '2': 2,
+    '3': 3,
+    '4': 4,
+    '5': 5,
+    '6': 6,    
+    '7': 7,    
+    '8': 8,
+    '9': 9,    
+    '10': 10,    
+    'j': 11,    
+    'q': 12,
+    'k': 13}
+
 value_map = {
     'a': 1,
     'j': 10,
     'q': 10,
     'k': 10
 }
+
 class Card:
     def __init__(self, rank_and_suit):
         # Support both single and double character ranks (e.g., '10h')
@@ -49,7 +65,8 @@ class Card:
             raise ValueError("Card is created with rank then suit, passed in suit first")
         self.value = value_map.get(self.rank.lower(), int(self.rank) if self.rank.isdigit() else None)
         self.tupl = (self.rank, self.suit)
-    
+        self.rank_order = rank_order_map[self.rank.lower()]
+
     def __hash__(self):
         return hash(self.tupl)
 

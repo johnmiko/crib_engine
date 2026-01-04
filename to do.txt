@@ -1,3 +1,8 @@
+Go order is currently not respected
+
+
+
+
 running on 8001
 - get everything working, check that a game is saved to the database
 - play against the beginner player, see if you can actually win or not

@@ -10,7 +10,7 @@ class PlayFirstCardPlayer(BasePlayer):
     def __init__(self, name: str = "play first card", seed: int | None = None):
         self.name = name
 
-    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool) -> Tuple[Card, Card]:
+    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool, your_score: int = 0, opponent_score: int = 0) -> Tuple[Card, Card]:
         return tuple(hand[:2])  # type: ignore
 
     def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:

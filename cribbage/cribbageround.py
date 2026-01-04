@@ -2,7 +2,7 @@ import logging
 import random
 
 from cribbage import scoring
-from cribbage.playingcards import Deck
+from cribbage.playingcards import Card, Deck
 from cribbage.state import RoundState
 
 logger = logging.getLogger(__name__)
@@ -187,45 +187,44 @@ class CribbageRound:
             logger.debug("2 points to %s for his heels." % str(self.dealer))
         self.history.starter = str(self.starter)
         active_players = [self.nondealer, self.dealer]
-        while sum([len(v) for v in self.hands.values()]) and self.game_winner is None:
+        players_said_go = []
+        any_player_has_at_least_1_card = any(len(hand) > 0 for hand in self.hands.values())
+        while any_player_has_at_least_1_card and self.game_winner is None:
             sequence_start_idx = len(self.table)
-            while active_players and self.game_winner is None:
+            while any_player_has_at_least_1_card and self.game_winner is None:
                 logger.debug(f"In while loop {len(active_players)}")
                 # Create a copy to iterate over, since we modify active_players during iteration
                 players_to_check = list(active_players)
                 for player in players_to_check:
+                    if player in players_said_go:
+                        logger.debug(f"Player {player.name} has already said go, skipping.")
+                        continue  
+                    logger.debug(f"score is {[self.game.board.get_score(p) for p in self.game.players]}")
                     logger.debug(f"Player {player.name}'s turn to play.")
                     logger.debug(f"active table cards {self.table[sequence_start_idx:]}")
-                    # logger.debug("Table: " + self.table_to_str(sequence_start_idx))
-                    # logger.debug("Player %s's hand: %s" % (player, self.hands[player]))
-                    # logger.debug(f"{self.table=}")
-                    # logger.debug(f"table is {self.table}")
                     count = self.get_table_value(sequence_start_idx) 
-
                     card = player.select_card_to_play(hand=self.hands[player.name], table=self.table[sequence_start_idx:],
-                                                 crib=self.crib, count=count)
-                    logger.debug(f"Player {player.name} selected card {card} with count {count}")
+                                                 crib=self.crib, count=count)                    
                     if card is None or card.get_value() + count > 31:
                         logger.debug("Player %s chooses go." % str(player))                        
                         loser = loser if loser else player
-                        active_players.remove(player)
-                        # If no one can play any more cards, give point to player of last card played
+                        if player.name not in players_said_go:
+                            players_said_go.append(player)
                     else:
-                        # self.table.append({'player': p, 'card': card})
-                        # logger.debug("Player %s plays %s." % (str(p), str(card)))
                         self.play_record.append(PlayRecord(f"{player.name} {str(card)}", self.table, self.table[sequence_start_idx:], self.get_table_value(sequence_start_idx), player.name, card, hand=self.hands[player.name][:]))                        
                         self.table.append(card)
+                        logger.debug(f"Player {player.name} selected card {card} at count {count} to {self.get_table_value(sequence_start_idx)}")
+                        if self.get_table_value(sequence_start_idx) == 31:
+                            self.game.board.peg(player, 1)
+                            self.play_record.append(PlayRecord(f"{player.name} scores 1 point for 31.", self.table, self.table, self.get_table_value(0), player.name, None, hand=None))                                                    
                         self.most_recent_player = player
                         self.hands[player.name].remove(card)
-                        if not self.hands[player.name]:                            
-                            active_players.remove(player)
-                        logger.debug("Player %s plays %s for %d" %
-                                (str(player), str(card), self.get_table_value(sequence_start_idx)))
                         # Consider cards played by both players when scoring during play
                         assert self.get_table_value(sequence_start_idx) <= 31, \
                             "Value of cards on table must be <= 31 to be eligible for scoring."
                         # only scores the latest play, need to test
                         sequence = self.table[sequence_start_idx:]
+                        # score play handles the 31 case
                         score = self._score_play(sequence)
                         # score = self._score_play(card_seq=[move['card'] for move in self.table[sequence_start_idx:]])
                         if score:
@@ -235,12 +234,22 @@ class CribbageRound:
                                 self.game_winner = winner
                                 break
 
-            if self.game_winner is None:
-                self.go_or_31_reached(active_players)
+                    if self.game_winner is None:
+                        if len(players_said_go) == 2:
+                            # Everyone has said go                        
+                            logger.debug("All players have said go or reached 31.")                    
+                            players_to_check = self.go_or_31_reached(players_said_go, self.table[sequence_start_idx:])
+                            players_said_go = []
+                            sequence_start_idx = len(self.table)
+                        any_player_has_at_least_1_card = any(len(hand) > 0 for hand in self.hands.values())
+                        if not any_player_has_at_least_1_card:                            
+                            self.game.board.peg(player, 1)
+                            self.play_record.append(PlayRecord(f"{player.name} scores 1 point for last card played", self.table, self.table, self.get_table_value(0),player.name, None, hand=None))
+                            self.history.score_after_pegging = [self.game.board.get_score(p) for p in self.game.players]
+                            break
 
         # Score each player's hand
         if self.game_winner is None:
-            self.history.score_after_pegging = [self.game.board.get_score(p) for p in self.game.players]
             for p in self.game.players:
                 p_cards_played = self.player_hand_after_discard[p.name] + [self.starter]
                 # logger.debug("Scoring " + str(p) + "'s hand: " + str(p_cards_played))
@@ -258,7 +267,18 @@ class CribbageRound:
         self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
         self.history.play_record = self.play_record
 
-    def go_or_31_reached(self, active_players):
+    def go_or_31_reached(self, players_said_go, count):
+        # If both players have reached 31 or "go" and not run out of cards, continue play
+        # players_said_go is a list of players ordered by who said go first
+        # function is called when all players had said go
+        # last player to say go gets 1 point
+        logger.debug(f"In go or 31 {len(players_said_go)}")
+        self.play_record.append(PlayRecord(f"{players_said_go[-1].name} scores 1 point for last card played", self.table, self.table, self.get_table_value(0),players_said_go[-1].name, None, hand=None))
+        self.game.board.peg(players_said_go[-1], 1)
+        logger.debug(f"score is {[self.game.board.get_score(p) for p in self.game.players]}")
+        return players_said_go
+
+    def go_or_31_reached_old(self, active_players):
         # If both players have reached 31 or "go" and not run out of cards, continue play
         logger.debug(f"In go or 31 {len(active_players)}")
         if not active_players:

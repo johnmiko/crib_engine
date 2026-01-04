@@ -232,7 +232,7 @@ def score_play(card_seq):
     :return: Points earned by player of latest card played in the sequence.
     """
     score = 0
-    score_scenarios = [ExactlyEqualsN(n=15), ExactlyEqualsN(n=31),
+    score_scenarios = [ExactlyEqualsN(n=15),
                         HasPairTripleQuad(), HasStraight_DuringPlay()]
     
     

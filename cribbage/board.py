@@ -44,5 +44,4 @@ class CribbageBoard:
         :return: Score for player.
         """
         front_peg = self.pegs[player.name]['front']
-        logger.debug(f"{front_peg=}")
         return front_peg

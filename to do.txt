@@ -1,8 +1,5 @@
 Go order is currently not respected
-    Asked copilot to fix it but it doesn't seem able to
-    Need to write a test in crib_engine to play 2 full rounds
-    Mock the deck and starter, check that go is respected
-    Once it's working in crib engine, then we need to check that it's working in the API
+    continue copying over test_go_scenarios
 
     Also had an instance after go was reached where I played my last card of 10, beginner
         had 4 and 9 left, and it chose to play the 4. When I went to add a test in to

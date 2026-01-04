@@ -77,7 +77,7 @@ class CribbageRound:
         self.hands = {self.game.players[0].name: [], self.game.players[1].name: []}
         self.player_hand_after_discard = {self.game.players[0].name: [], self.game.players[1].name: []}
         self.crib = []
-        self.table = []
+        self.table = [] # all cards that have been played over each "up to 31" thing
         self.starter = None
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p.name != dealer.name][0]
@@ -207,9 +207,8 @@ class CribbageRound:
                                                  crib=self.crib, count=count)                    
                     if card is None or card.get_value() + count > 31:
                         logger.debug("Player %s chooses go." % str(player))                        
-                        loser = loser if loser else player
-                        if player.name not in players_said_go:
-                            players_said_go.append(player)
+                        loser = loser if loser else player                        
+                        players_said_go.append(player)
                     else:
                         self.play_record.append(PlayRecord(f"{player.name} {str(card)}", self.table, self.table[sequence_start_idx:], self.get_table_value(sequence_start_idx), player.name, card, hand=self.hands[player.name][:]))                        
                         self.table.append(card)

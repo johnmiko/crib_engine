@@ -36,6 +36,7 @@ class GameStateResponse(BaseModel):
     your_hand: List[CardData]
     computer_hand: List[CardData]  # For debugging
     table_cards: List[CardData]
+    table_history: List[CardData]
     scores: Dict[str, int]  # {"you": 0, "computer": 0}
     dealer: str
     table_value: int
@@ -45,3 +46,4 @@ class GameStateResponse(BaseModel):
     winner: Optional[str] = None
     computer_hand_count: Optional[int] = None
     round_summary: Optional[Dict] = None
+    points_pegged: Optional[List[int]] = None

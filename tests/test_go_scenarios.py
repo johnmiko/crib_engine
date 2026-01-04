@@ -13,8 +13,6 @@ def test_go_scenario_with_continuation():
     """
     Test "go" logic, who scores and who's turn it is 
     """
-    # Create a game with specific seeds to get a reproducible "go" scenario
-    # Using RandomPlayer but with mocked play_pegging to make it deterministic    
     p0 = PlayFirstCardPlayer(name="Player1")
     p1 = PlayFirstCardPlayer(name="Player2")
     game1 = CribbageGame(players=[p0, p1], seed=123)

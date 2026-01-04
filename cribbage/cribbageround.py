@@ -191,7 +191,9 @@ class CribbageRound:
             sequence_start_idx = len(self.table)
             while active_players and self.game_winner is None:
                 logger.debug(f"In while loop {len(active_players)}")
-                for player in active_players:
+                # Create a copy to iterate over, since we modify active_players during iteration
+                players_to_check = list(active_players)
+                for player in players_to_check:
                     logger.debug(f"Player {player.name}'s turn to play.")
                     logger.debug(f"active table cards {self.table[sequence_start_idx:]}")
                     # logger.debug("Table: " + self.table_to_str(sequence_start_idx))

@@ -57,6 +57,7 @@ def test_beginner_player_basic_pegging_strategy():
     assert player.select_card_to_play(build_hand(['5d', '10d', 'js','jc']), build_hand(["5c"]), count=5) == Card("js")
     # 5d and 2d score 3 points so it is played. 5 is higher so it's played
     assert player.select_card_to_play(build_hand(['5d', '2d', 'ks','kc']), build_hand(["3d","4c"]), count=7) == Card("5d")
+    # below are added asserts of errors I saw while playing    
     # when actually playing a game, beginner did not play correct cards here    
     # Test 2: Opponent plays 8, count=8 - player can make 15 with 7
     # Basic pegging strategy should prioritize scoring 15

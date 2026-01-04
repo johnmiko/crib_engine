@@ -1,4 +1,5 @@
 Go order is currently not respected
+    added tests to crib_back but..will play a round to check 
 
 
 

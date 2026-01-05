@@ -46,4 +46,4 @@ class GameStateResponse(BaseModel):
     winner: Optional[str] = None
     computer_hand_count: Optional[int] = None
     round_summary: Optional[Dict] = None
-    points_pegged: Optional[List[int]] = None
+    points_pegged: Optional[List[int]] = None    

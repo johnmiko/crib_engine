@@ -1,10 +1,17 @@
-Go order is currently not respected
-    continue copying over test_go_scenarios
+Given that the game state object at the end of the round looks like this
 
-    Also had an instance after go was reached where I played my last card of 10, beginner
-        had 4 and 9 left, and it chose to play the 4. When I went to add a test in to
-        test_beginner_player, it does the correct thing. So the problem is either with the
-        table being reset, or in the API
+game_id='3046987c-268d-4bf3-8a17-5934f83b0636' action_required=<ActionType.ROUND_COMPLETE: 'round_complete'> message='Round complete. Review hands and continue.' your_hand=[] computer_hand=[] table_cards=[CardData(rank='j', suit='c', symbol='jc', value=10)] table_history=[CardData(rank='k', suit='h', symbol='kh', value=10), CardData(rank='10', suit='s', symbol='10s', value=10), CardData(rank='3', suit='h', symbol='3h', value=3), CardData(rank='a', suit='c', symbol='ac', value=1), CardData(rank='a', suit='d', symbol='ad', value=1), CardData(rank='3', suit='c', symbol='3c', value=3), CardData(rank='a', suit='h', symbol='ah', value=1), CardData(rank='j', suit='c', symbol='jc', value=10)] scores={'you': 9, 'computer': 9} dealer='you' table_value=10 starter_card=CardData(rank='q', suit='d', symbol='qd', value=10) valid_card_indices=[] game_over=False winner=None computer_hand_count=0 round_summary={'hands': {'you': [CardData(rank='10', suit='s', symbol='10s', value=10), CardData(rank='a', suit='c', symbol='ac', value=1), CardData(rank='3', suit='c', symbol='3c', value=3), CardData(rank='j', suit='c', symbol='jc', value=10), CardData(rank='q', suit='d', symbol='qd', value=10)], 'computer': [CardData(rank='k', suit='h', symbol='kh', value=10), CardData(rank='3', suit='h', symbol='3h', value=3), CardData(rank='a', suit='d', symbol='ad', value=1), CardData(rank='a', suit='h', symbol='ah', value=1), CardData(rank='q', suit='d', symbol='qd', value=10)], 'crib': [CardData(rank='3', suit='s', symbol='3s', value=3), CardData(rank='7', suit='s', symbol='7s', value=7), CardData(rank='9', suit='d', symbol='9d', value=9), CardData(rank='8', suit='h', symbol='8h', value=8), CardData(rank='q', suit='d', symbol='qd', value=10)]}, 'points': {'you': 3, 'computer': 6, 'crib': 5}, 'breakdowns': {'you': [{'points': 3, 'description': '3-card straight '}], 'computer': [{'points': 4, 'description': '2 unique 15-counts'}, {'points': 2, 'description': 'Pair (a)'}], 'crib': [{'points': 2, 'description': '1 unique 15-counts'}, {'points': 3, 'description': '3-card straight '}]}} points_pegged=[1, 3]
+
+
+
+
+
+
+
+Also had an instance after go was reached where I played my last card of 10, beginner
+    had 4 and 9 left, and it chose to play the 4. When I went to add a test in to
+    test_beginner_player, it does the correct thing. So the problem is either with the
+    table being reset, or in the API
 
 
 

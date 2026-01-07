@@ -131,7 +131,8 @@ class MediumPlayer(BeginnerPlayer):
 
     def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
         return medium_pegging_strategy(playable, count, history_since_reset)
-    # def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None) -> Tuple[Card, Card]:                
-    #     # best_discards = exact_hand_and_fast_crib(hand, dealer_is_self)
-    #     best_discards = exact_hand_and_min_crib(hand, dealer_is_self, your_score=your_score, opponent_score=opponent_score)
-    #     return best_discards
+    
+    def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None) -> Tuple[Card, Card]:                
+        # best_discards = exact_hand_and_fast_crib(hand, dealer_is_self)
+        best_discards = exact_hand_and_min_crib(hand, dealer_is_self, your_score=your_score, opponent_score=opponent_score)
+        return best_discards

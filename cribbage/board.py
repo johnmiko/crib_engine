@@ -8,6 +8,7 @@ class CribbageBoard:
     def __init__(self, players, max_score):
         self.max_score = max_score
         self.pegs = {p.name: {'front': 0, 'rear': 0} for p in players}
+        self.players = players
 
     def __str__(self):
         s = "[PEGS] "
@@ -45,3 +46,10 @@ class CribbageBoard:
         """
         front_peg = self.pegs[player.name]['front']
         return front_peg
+    
+    def get_scores(self):
+        """Return current scores for all players.
+
+        :return: List of scores for all players.
+        """
+        return [self.get_score(player) for player in self.players]

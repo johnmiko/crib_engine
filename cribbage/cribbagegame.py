@@ -32,7 +32,7 @@ class CribbageGame:
     CRIB_SIZE = 4  # size of the crib
     N_GO = 31  # round sequence ends at this card point total
 
-    def __init__(self, players, seed: int | None = None, copy_players: bool = True):
+    def __init__(self, players, seed: int | None = None, copy_players: bool = True, dealer=None):
         # self.players = players  #: the two players
         if copy_players:
             self.players = [deepcopy(p) for p in players]

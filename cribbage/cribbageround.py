@@ -248,21 +248,44 @@ class CribbageRound:
                             break
 
         # Score each player's hand
+        # Non-dealer counts first, then dealer, then crib
+        # Game ends immediately when someone reaches 121
         if self.game_winner is None:
-            for p in self.game.players:
-                p_cards_played = self.player_hand_after_discard[p.name] + [self.starter]
-                # logger.debug("Scoring " + str(p) + "'s hand: " + str(p_cards_played))
-                score = self._score_hand(cards=self.player_hand_after_discard[p.name] + [self.starter], is_crib=False)  # Include starter card as part of hand                
-                self.history.hand_scores[p.name] = score
-                if score:
-                    self.game.board.peg(p, score)
+            # Non-dealer counts first
+            logger.debug(f"Scoring non-dealer {self.nondealer.name} hand: {self.player_hand_after_discard.get(self.nondealer.name, 'NOT FOUND')}")
+            p_cards_played = self.player_hand_after_discard[self.nondealer.name] + [self.starter]
+            score = self._score_hand(cards=self.player_hand_after_discard[self.nondealer.name] + [self.starter], is_crib=False)
+            self.history.hand_scores[self.nondealer.name] = score
+            logger.debug(f"Non-dealer {self.nondealer.name} scored {score} points")
+            if score:
+                winner = self.game.board.peg(self.nondealer, score)
+                if winner is not None:
+                    self.game_winner = winner
+                    logger.debug(f"Non-dealer {self.nondealer.name} wins!")
 
-            # Score the crib
+        # Dealer counts second (if game not yet won)
+        if self.game_winner is None:
+            logger.debug(f"Scoring dealer {self.dealer.name} hand: {self.player_hand_after_discard.get(self.dealer.name, 'NOT FOUND')}")
+            p_cards_played = self.player_hand_after_discard[self.dealer.name] + [self.starter]
+            score = self._score_hand(cards=self.player_hand_after_discard[self.dealer.name] + [self.starter], is_crib=False)
+            self.history.hand_scores[self.dealer.name] = score
+            logger.debug(f"Dealer {self.dealer.name} scored {score} points")
+            if score:
+                winner = self.game.board.peg(self.dealer, score)
+                if winner is not None:
+                    self.game_winner = winner
+                    logger.debug(f"Dealer {self.dealer.name} wins!")
+
+        # Score the crib (if game not yet won)
+        if self.game_winner is None:
             logger.debug("Scoring the crib: " + str(self.crib + [self.starter]))
             score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)
             self.history.crib_score = score  # Include starter card as part of crib
             if score:
-                self.game.board.peg(self.dealer, score)
+                winner = self.game.board.peg(self.dealer, score)
+                if winner is not None:
+                    self.game_winner = winner
+
         self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
         self.history.play_record = self.play_record
 

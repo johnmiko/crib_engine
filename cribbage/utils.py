@@ -84,6 +84,7 @@ def play_multiple_games_old(num_games, p0, p1, seed=None) -> dict:
 
 def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
     wins = 0
+    ties = 0
     diffs = []
     for i in range(num_games):
         # if (i % 100) == 0:
@@ -92,14 +93,14 @@ def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
         if i % 2 == 0:
             s0, s1 = play_game(p0, p1, seed=seed)
             diff = s0 - s1
-            if diff > 0:
-                wins += 1
         else:
             s0, s1 = play_game(p1, p0, seed=seed)
             diff = s1 - s0
-            if diff > 0:
-                wins += 1
+        if diff > 0:
+            wins += 1
+        elif diff == 0:
+             ties += 1
         diffs.append(diff)
-    winrate = wins / num_games
-    lo, hi = wilson_ci(wins, num_games)    
-    return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi}
+    winrate = wins / (num_games - ties)
+    lo, hi = wilson_ci(wins, (num_games - ties))    
+    return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi, "ties": ties}

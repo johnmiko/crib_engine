@@ -28,7 +28,7 @@ class BasePlayer(metaclass=ABCMeta):
         raise NotImplementedError
 
     @abstractmethod
-    def select_card_to_play(self, hand, table, crib):
+    def select_card_to_play(self, hand, table, crib, count):
         """Select next card to play.
 
         :param hand: list containing the cards in the player's hand

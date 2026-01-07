@@ -234,8 +234,7 @@ def score_play(card_seq):
     score = 0
     score_scenarios = [ExactlyEqualsN(n=15),
                         HasPairTripleQuad(), HasStraight_DuringPlay()]
-    
-    
+        
     for scenario in score_scenarios:
         s, desc = scenario.check(card_seq[:])
         score += s

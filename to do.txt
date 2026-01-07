@@ -1,7 +1,32 @@
-Given that the game state object at the end of the round looks like this
+End of game bug
+    Needs to take into account who scores first
+    If one player wins by pegging, and then, who counts first, need to write tests for this
+    test_end_of_game_chooses_correct_winner
+        Set both players scores to 119
+        p1_wins_scoring_121
+            pegs 15 for 2 and wins the game
+        p2_wins_scoring_121
+            pegs 15 for 2 and wins the game
+        p1_counts_first_and_wins
+            p2 has crib
+        p2_counts_first_and_wins
+            p1 has crib
+        p1_counts_second_and_wins
+            p2 has 0 in their hand
+        p1_counts_second_and_wins_in_crib
+            p2 has 0 points, p1 has 0 points, p1 has points in the crib
 
-game_id='3046987c-268d-4bf3-8a17-5934f83b0636' action_required=<ActionType.ROUND_COMPLETE: 'round_complete'> message='Round complete. Review hands and continue.' your_hand=[] computer_hand=[] table_cards=[CardData(rank='j', suit='c', symbol='jc', value=10)] table_history=[CardData(rank='k', suit='h', symbol='kh', value=10), CardData(rank='10', suit='s', symbol='10s', value=10), CardData(rank='3', suit='h', symbol='3h', value=3), CardData(rank='a', suit='c', symbol='ac', value=1), CardData(rank='a', suit='d', symbol='ad', value=1), CardData(rank='3', suit='c', symbol='3c', value=3), CardData(rank='a', suit='h', symbol='ah', value=1), CardData(rank='j', suit='c', symbol='jc', value=10)] scores={'you': 9, 'computer': 9} dealer='you' table_value=10 starter_card=CardData(rank='q', suit='d', symbol='qd', value=10) valid_card_indices=[] game_over=False winner=None computer_hand_count=0 round_summary={'hands': {'you': [CardData(rank='10', suit='s', symbol='10s', value=10), CardData(rank='a', suit='c', symbol='ac', value=1), CardData(rank='3', suit='c', symbol='3c', value=3), CardData(rank='j', suit='c', symbol='jc', value=10), CardData(rank='q', suit='d', symbol='qd', value=10)], 'computer': [CardData(rank='k', suit='h', symbol='kh', value=10), CardData(rank='3', suit='h', symbol='3h', value=3), CardData(rank='a', suit='d', symbol='ad', value=1), CardData(rank='a', suit='h', symbol='ah', value=1), CardData(rank='q', suit='d', symbol='qd', value=10)], 'crib': [CardData(rank='3', suit='s', symbol='3s', value=3), CardData(rank='7', suit='s', symbol='7s', value=7), CardData(rank='9', suit='d', symbol='9d', value=9), CardData(rank='8', suit='h', symbol='8h', value=8), CardData(rank='q', suit='d', symbol='qd', value=10)]}, 'points': {'you': 3, 'computer': 6, 'crib': 5}, 'breakdowns': {'you': [{'points': 3, 'description': '3-card straight '}], 'computer': [{'points': 4, 'description': '2 unique 15-counts'}, {'points': 2, 'description': 'Pair (a)'}], 'crib': [{'points': 2, 'description': '1 unique 15-counts'}, {'points': 3, 'description': '3-card straight '}]}} points_pegged=[1, 3]
 
+test_pegging_strategies
+    look over the test for medium_pegging_strategy, check that it actually does what we need it to do
+    We need to "add" the modified crib points to the hand instead of replacing them if that was done
+        Meaning that the new pegging points are all 0 we can apply those rules
+        But even better would be to add like +/-0.3-0.6 points or whatever to the existing points
+        So that if we have a tie (ex opponent plays 3,4 and we have the choice to play 2 or 5 then it varies)
+
+    Then we need to benchmark this strategy vs the beginner strategy
+
+Want to add a description to the players so we know what they are doing
 
 
 

@@ -2,7 +2,7 @@
 from itertools import combinations
 import sqlite3
 import pandas as pd
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from cribbage.constants import DB_PATH
 from cribbage.strategies.crib_strategies import calc_crib_ranges_fast_given_6_cards
 from cribbage.database import normalize_hand_to_str
@@ -11,6 +11,8 @@ from cribbage.players.beginner_player import BeginnerPlayer
 from cribbage.players.rule_based_player import get_full_deck
 from cribbage.playingcards import Card, build_hand
 import logging
+
+from cribbage.strategies.pegging_strategies import medium_pegging_strategy
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +129,9 @@ class MediumPlayer(BeginnerPlayer):
     def __init__(self, name: str = "medium"):
         super().__init__(name=name)
 
-    def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None) -> Tuple[Card, Card]:                
-        # best_discards = exact_hand_and_fast_crib(hand, dealer_is_self)
-        best_discards = exact_hand_and_min_crib(hand, dealer_is_self, your_score=your_score, opponent_score=opponent_score)
-        return best_discards
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
+        return medium_pegging_strategy(playable, count, history_since_reset)
+    # def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None) -> Tuple[Card, Card]:                
+    #     # best_discards = exact_hand_and_fast_crib(hand, dealer_is_self)
+    #     best_discards = exact_hand_and_min_crib(hand, dealer_is_self, your_score=your_score, opponent_score=opponent_score)
+    #     return best_discards

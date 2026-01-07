@@ -202,7 +202,7 @@ class CribbageRound:
                     logger.debug(f"score is {[self.game.board.get_score(p) for p in self.game.players]}")
                     logger.debug(f"Player {player.name}'s turn to play.")
                     logger.debug(f"active table cards {self.table[sequence_start_idx:]}")
-                    count = self.get_table_value(sequence_start_idx) 
+                    count = self.get_table_value(sequence_start_idx)                                           
                     card = player.select_card_to_play(hand=self.hands[player.name], table=self.table[sequence_start_idx:],
                                                  crib=self.crib, count=count)                    
                     if card is None or card.get_value() + count > 31:

@@ -163,31 +163,62 @@ class CribbageRound:
         return_val = sum(i.get_value() for i in self.table[sequence_start_idx:]) if self.table else 0
         return return_val
 
-    def set_up_round_and_deal_cards(self):
-        """Set up cribbage round and deal cards to players."""
+    def setup_deal_phase(self):
+        """Phase 1: Cut and deal cards to players.
+        
+        Separated for composability - can be called independently by API wrapper.
+        """
         self._cut()
         self._deal()
-        # round1 cards = {Random1: [qc, kc, 6h, 4h, 7s, 5d], Random2: [5s, 6c, 4d, 2h, 2d, 3d]}
         logger.debug(self.hands)
         self.history.dealer = self.dealer.name
         self.history.cards_dealt = {p.name: [str(card) for card in self.hands[p.name]] for p in self.game.players}
+
+    def setup_crib_phase(self):
+        """Phase 2: Populate crib and draw starter.
+        
+        Separated for composability - can be called independently by API wrapper.
+        """
         self._populate_crib()
         self.history.crib = [str(card) for card in self.crib]
         self.history.score_at_start_of_round = [self.game.board.get_score(p) for p in self.game.players]
+        self._cut()
+        # Only draw starter if not already set (allows mocking for tests)
+        if self.starter is None:
+            self.starter = self.deck.draw()
+
+    def setup_starter_scoring(self):
+        """Phase 3: Score 2 for his heels if starter is Jack.
+        
+        Returns winner if heels wins the game, None otherwise.
+        """
+        if self.starter and self.starter.rank == 'j':
+            self.play_record.append(PlayRecord(f"Dealer {self.dealer.name} scores 2 point for heels.", self.table, self.table, 0, self.dealer.name, self.starter, hand=None))
+            self.game_winner = self.game.board.peg(self.dealer, 2)     
+            if self.game_winner is not None:
+                return self.game_winner
+            logger.debug("2 points to %s for his heels." % str(self.dealer))
+        self.history.starter = str(self.starter)
+        return None
+
+    def set_up_round_and_deal_cards(self):
+        """Set up cribbage round and deal cards to players.
+        
+        Kept for backward compatibility - combines all setup phases.
+        """
+        self.setup_deal_phase()
+        self.setup_crib_phase()
         self.starter = self.deck.draw()
 
     def play(self):
         """Start cribbage round."""
         loser = None
-        self.set_up_round_and_deal_cards()
+        self.setup_deal_phase()
+        self.setup_crib_phase()
         logger.debug("Starter card is %s." % str(self.starter))
-        if self.starter.rank == 'j': # type: ignore
-            self.play_record.append(PlayRecord(f"Dealer {self.dealer.name} scores 2 point for heels.", self.table, self.table, 0, self.dealer.name, self.starter, hand=None))
-            self.game_winner = self.game.board.peg(self.dealer, 2)     
-            if self.game_winner is not None:
-                 return       
-            logger.debug("2 points to %s for his heels." % str(self.dealer))
-        self.history.starter = str(self.starter)
+        winner = self.setup_starter_scoring()
+        if winner is not None:
+            return
         active_players = [self.nondealer, self.dealer]
         players_said_go = []
         any_player_has_at_least_1_card = any(len(hand) > 0 for hand in self.hands.values())
@@ -251,6 +282,13 @@ class CribbageRound:
         # Score each player's hand
         # Non-dealer counts first, then dealer, then crib
         # Game ends immediately when someone reaches 121
+        self.score_hands_phase()
+
+        self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
+        self.history.play_record = self.play_record
+
+    def score_nondealer_hand(self):
+        """Score non-dealer's hand. Returns winner if this wins the game, None otherwise."""
         if self.game_winner is None:
             # Non-dealer counts first
             logger.debug(f"Scoring non-dealer {self.nondealer.name} hand: {self.player_hand_after_discard.get(self.nondealer.name, 'NOT FOUND')}")
@@ -263,8 +301,11 @@ class CribbageRound:
                 if winner is not None:
                     self.game_winner = winner
                     logger.debug(f"Non-dealer {self.nondealer.name} wins!")
-                    return
+                    return winner
+        return None
 
+    def score_dealer_hand(self):
+        """Score dealer's hand. Returns winner if this wins the game, None otherwise."""
         # Dealer counts second (if game not yet won)
         if self.game_winner is None:
             logger.debug(f"Scoring dealer {self.dealer.name} hand: {self.player_hand_after_discard.get(self.dealer.name, 'NOT FOUND')}")
@@ -277,8 +318,11 @@ class CribbageRound:
                 if winner is not None:
                     self.game_winner = winner
                     logger.debug(f"Dealer {self.dealer.name} wins!")
-                    return
+                    return winner
+        return None
 
+    def score_crib(self):
+        """Score the crib. Returns winner if this wins the game, None otherwise."""
         # Score the crib (if game not yet won)
         if self.game_winner is None:
             logger.debug("Scoring the crib: " + str(self.crib + [self.starter]))
@@ -288,7 +332,14 @@ class CribbageRound:
                 winner = self.game.board.peg(self.dealer, score)
                 if winner is not None:
                     self.game_winner = winner
-                    return
+                    return winner
+        return None
+
+    def score_hands_phase(self):
+        """Score all hands in proper order: nondealer, dealer, crib."""
+        self.score_nondealer_hand()
+        self.score_dealer_hand()
+        self.score_crib()
 
         self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
         self.history.play_record = self.play_record

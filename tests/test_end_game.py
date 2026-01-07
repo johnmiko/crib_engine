@@ -15,15 +15,16 @@ class MockCribbageRound(CribbageRound):
         super().__init__(game, dealer, seed)
         self.mock_starter_card = mock_starter_card
         self.should_populate_crib = should_populate_crib
+        # Pre-set starter so setup_crib_phase won't override it
+        self.starter = self.mock_starter_card
 
-    def set_up_round_and_deal_cards(self):
-        self.history.dealer = self.dealer.name
-        self.history.cards_dealt = {p.name: [str(card) for card in self.hands[p.name]] for p in self.game.players}
+    def setup_crib_phase(self):
+        """Override to respect mock_starter_card."""
         if self.should_populate_crib:
             self._populate_crib()
             self.history.crib = [str(card) for card in self.crib]
         self.history.score_at_start_of_round = [self.game.board.get_score(p) for p in self.game.players]
-        self.starter = self.mock_starter_card
+        # starter already set in __init__
 
 def test_p1_wins_by_pegging_to_121():
     """Test that p1 wins by pegging 15 for 2 points from 119 to 121."""

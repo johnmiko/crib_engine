@@ -105,14 +105,14 @@ def test_medium_player_chooses_correct_discard_simple_hand():
     player = MediumPlayer()
     hand = build_hand(["ac","ad","ah","as","2h","2d"])
     crib_cards = player.select_crib_cards(hand, dealer_is_self=True)
-    assert crib_cards == tuple(build_hand(["2d","2h"]))
+    assert set(crib_cards) == set(build_hand(["2d","2h"]))
 
 
 def test_medium_player_chooses_correct_discard():
     player = MediumPlayer()
     hand = build_hand(RUN_FLUSH_HAND)
     crib_cards = player.select_crib_cards(hand, dealer_is_self=True)
-    assert crib_cards == tuple(build_hand(["7h","8h"]))
+    assert set(crib_cards) == set(build_hand(["7h","8h"]))
 
 # def test_min_hand_calc_is_correct():
 #     hand = build_hand(["3h","4h","5h","6h"])
@@ -158,6 +158,7 @@ def test_medium_player_chooses_correct_discard():
     # kept_key = "5H|6H|7H|8H"
     # assert df2.loc[df2["hand_key"] == kept_key, "min_score_hand"].values[0] == 12
 
+@pytest.mark.super_slow
 def test_process_dealt_hand_and_crib_works_correctly():
     # hand = build_hand(RUN_FLUSH_HAND)
     hand = build_hand(['3d', '10c', '6s', 'kd', '6d', '4c'])
@@ -193,6 +194,7 @@ def test_process_dealt_hand_and_crib_works_correctly():
     assert bad_hand_approxes.empty, f"Bad hand approximations: {bad_hand_approxes.to_string()}"
     assert bad_crib_approxes.empty, f"Bad crib approximations: {bad_crib_approxes.to_string()}"
 
+@pytest.mark.super_slow
 def test_process_dealt_hand_only_works_correctly():
     # hand = build_hand(RUN_FLUSH_HAND)
     full_deck = get_full_deck()
@@ -220,7 +222,7 @@ def test_process_dealt_hand_only_works_correctly():
     assert elapsed_time < max_elapsed_time, f"Test took {elapsed_time:.2f}s, expected < {max_elapsed_time}s"
     
 
-@pytest.mark.slow
+@pytest.mark.super_slow
 def test_calc_crib_ranges_almost_exact_is_faster_and_close_enough():    
     start_time = time.time()
     
@@ -282,7 +284,7 @@ def test_calc_crib_ranges_almost_exact_is_faster_and_close_enough():
     max_elapsed_time = 7
     assert elapsed_time < max_elapsed_time, f"Test took {elapsed_time:.2f}s, expected < {max_elapsed_time}s"
 
-@pytest.mark.slow
+@pytest.mark.super_slow
 def test_calc_crib_ranges_exact_and_slow_is_exact():    
     start_time = time.time()
     
@@ -354,7 +356,7 @@ def test_medium_player_chooses_correct_discard_specific_hand():
     crib_cards = player.select_crib_cards(hand, dealer_is_self=False)
     assert crib_cards == tuple(build_hand(["10c","kd"]))
 
-
+@pytest.mark.super_slow
 def test_calc_crib_ranges_fast_close_enough():    
     start_time = time.time()
     

@@ -50,48 +50,48 @@ def test_beginner_player_basic_pegging_strategy():
     # rather than 7s (highest card). This test documents actual behavior.
     table = []
     # First king is played    
-    assert player.select_card_to_play(build_hand(['ah', '10d', 'kc', 'ks']), table, count=0) == Card("kc")
+    assert player.select_card_to_play(build_hand(['ah', '10d', 'kc', 'ks']), table, count=0, crib=None) == Card("kc")
     # First king is played    
-    assert player.select_card_to_play(build_hand(['ks', 'ah', '10d', 'kc']), table, count=0) == Card("ks")
+    assert player.select_card_to_play(build_hand(['ks', 'ah', '10d', 'kc']), table, count=0, crib=None) == Card("ks")
     # 5d, 10d,ks,kc score 2 points, so first king is played (highest rank)
-    assert player.select_card_to_play(build_hand(['5d', '10d', 'js','jc']), build_hand(["5c"]), count=5) == Card("js")
+    assert player.select_card_to_play(build_hand(['5d', '10d', 'js','jc']), build_hand(["5c"]), count=5, crib=None) == Card("js")
     # 5d and 2d score 3 points so it is played. 5 is higher so it's played
-    assert player.select_card_to_play(build_hand(['5d', '2d', 'ks','kc']), build_hand(["3d","4c"]), count=7) == Card("5d")
+    assert player.select_card_to_play(build_hand(['5d', '2d', 'ks','kc']), build_hand(["3d","4c"]), count=7, crib=None) == Card("5d")
     # below are added asserts of errors I saw while playing    
     # when actually playing a game, beginner did not play correct cards here    
     # Test 2: Opponent plays 8, count=8 - player can make 15 with 7
     # Basic pegging strategy should prioritize scoring 15
     table = [Card('8h')]
     remaining_hand = build_hand(['5h', '5d', '6c', '7s'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=8)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=8, crib=None)
     assert card_played.rank == '7', f"Expected to play 7 to make 15, but played {card_played.rank}"
     
     # Test 3: Table is [8, 7], count=15 - player has 5,5,6 left
     # Playing 6 makes a run of 3 (6-7-8) for 3 points!
     table = [Card('8h'), Card('7d')]
     remaining_hand = build_hand(['5h', '5d', '6c'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=15)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=15, crib=None)
     # Should play 6 to score 3 points for the run
     assert card_played.rank == '6', f"Expected to play 6 to make run (6-7-8), but played {card_played.rank}"
     
     # Test 4: Count is 26, can only play 5 (not 6 as it would bust)
     table = [Card('8h'), Card('7d'), Card('6s'), Card('5c')]
     remaining_hand = build_hand(['5h', '5d'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=26)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=26, crib=None)
     assert card_played.rank == '5', f"Expected to play 5 (only playable card), but played {card_played.rank}"
     
     # Test 5: Count is 21, player has [5,5,6] left, opponent played [8,7,5]
     # Playing 5 makes a pair for 2 points, but playing 6 makes a run of 4 (5-6-7-8) for 4 points!
     table = [Card('8h'), Card('7d'), Card('5c')]
     remaining_hand = build_hand(['5h', '5d', '6c'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=21)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=21, crib=None)
     # Should play 6 to make run of 4 for 4 points (better than pair for 2 points)
     assert card_played.rank == '6', f"Expected to play 6 to make run of 4, but played {card_played.rank}"
     
     # Test 6: Opponent plays 10, count=10 - player can make 15 with a 5
     table = [Card('10h')]
     remaining_hand = build_hand(['5h', '5d', '6c', '7s'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=10)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=10, crib=None)
     # Should play 5 to make 15 (scores 2 points)
     assert card_played.rank == '5', f"Expected to play 5 to make 15, but played {card_played.rank}"
     
@@ -100,6 +100,6 @@ def test_beginner_player_basic_pegging_strategy():
     # Playing 6 makes a run of 4 (6-7-8-9) for 4 points!
     table = [Card('8h'), Card('7d'), Card('9c')]
     remaining_hand = build_hand(['5h', '5d', '6c', '7s'])
-    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=24)
+    card_played = player.select_card_to_play(remaining_hand.copy(), table, count=24, crib=None)
     # Should play 6 to make run of 4 for 4 points (better than pair or 31)
     assert card_played.rank == '6', f"Expected to play 6 to make run of 4, but played {card_played.rank}"

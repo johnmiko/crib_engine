@@ -1,28 +1,6 @@
-End of game bug - FIXED!
-    Bug found and fixed in cribbageround.py lines 250-282
-    Issue: Hands were being counted in wrong order (used for p in self.game.players instead of non-dealer first, dealer second)
-    Issue: Game didn't check for winner after EACH hand was counted, only before the loop
-    Issue: Return value from board.peg() wasn't being captured to set game_winner
-    
-    Fix applied:
-    - Non-dealer counts first, then dealer, then crib
-    - Game checks for winner after EACH scoring event
-    - Properly captures winner from board.peg()
-    
-    Tests show pegging winner detection already works correctly
-    Tests for hand counting scenarios pass: test_p1_counts_second_and_wins, test_p1_counts_second_and_wins_in_crib
-    
-    Remaining test failures are due to test design (cards score during pegging), not bugs in the game logic
-
-
-test_pegging_strategies
-    look over the test for medium_pegging_strategy, check that it actually does what we need it to do
-    We need to "add" the modified crib points to the hand instead of replacing them if that was done
-        Meaning that the new pegging points are all 0 we can apply those rules
-        But even better would be to add like +/-0.3-0.6 points or whatever to the existing points
-        So that if we have a tie (ex opponent plays 3,4 and we have the choice to play 2 or 5 then it varies)
-
-    Then we need to benchmark this strategy vs the beginner strategy
+Get tests passing in crib_engine
+get tests passing in crib_back
+Refactor crib_engine and crib_back to use more of the same code
 
 Want to add a description to the players so we know what they are doing
 

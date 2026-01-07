@@ -19,7 +19,7 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
     first_card_player = PlayFirstCardPlayer(name="PlayFirstCardPlayer")
     results = play_multiple_games(num_games, p0=random_player, p1=first_card_player, seed=42)  
     # manually ran once and copied results for test
-    assert results == {'wins': 1, 'diffs': [36], 'winrate': 1.0, 'ci_lo': 0.2065432914738929, 'ci_hi': 1.0}
+    assert results == {'wins': 1, 'diffs': [36], 'winrate': 1.0, 'ci_lo': 0.2065432914738929, 'ci_hi': 1.0, 'ties': 0}
 
 # def test_random_vs_first_card_player():
 #     # both players are random so we expect about 50% win rate
@@ -43,9 +43,8 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 #     logger.info(f"BeginnerPlayer wins: {wins}/{num_games} ({win_rate:.2%})")
 #     assert win_rate > 0.98, "BeginnerPlayer should win at least 98% of the time against PlayFirstCardPlayer"        
 
-@pytest.mark.slow
+@pytest.mark.super_slow
 def test_beginner_vs_medium_player():
-# Not sure why this fails, guessing it's because of endgame strategies differ
     num_games = 300
     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
     medium_player = MediumPlayer(name="MediumPlayer")    

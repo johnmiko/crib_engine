@@ -51,6 +51,15 @@ value_map = {
     'q': 10,
     'k': 10
 }
+class Hand:
+    def __init__(self, cards: List[ 'Card' ] = []):
+        self.cards = cards
+
+    def get_cards(self) -> List['Card']:
+        return self.cards
+
+    def __eq__(self, other):
+        return set(self.cards) == set(other.cards)        
 
 class Card:
     def __init__(self, rank_and_suit):

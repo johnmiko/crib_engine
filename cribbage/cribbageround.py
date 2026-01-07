@@ -184,7 +184,8 @@ class CribbageRound:
         if self.starter.rank == 'j': # type: ignore
             self.play_record.append(PlayRecord(f"Dealer {self.dealer.name} scores 2 point for heels.", self.table, self.table, 0, self.dealer.name, self.starter, hand=None))
             self.game_winner = self.game.board.peg(self.dealer, 2)     
-            return       
+            if self.game_winner is not None:
+                 return       
             logger.debug("2 points to %s for his heels." % str(self.dealer))
         self.history.starter = str(self.starter)
         active_players = [self.nondealer, self.dealer]

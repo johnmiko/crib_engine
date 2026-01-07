@@ -203,7 +203,7 @@ def test_p2_wins_on_nibs():
     assert game.board.get_scores() == [119, 121]
     assert round1.game_winner.name == p2.name, "Expected p2 to be the winner"
 
-
+@pytest.mark.slow
 def test_tie_is_impossible():
     def play_multiple_end_games(num_games, p0, p1, seed=None) -> dict:
         wins = 0

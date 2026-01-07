@@ -125,7 +125,8 @@ def exact_hand_and_min_crib(hand, dealer_is_self, your_score=None, opponent_scor
 #     logger.info(f"\n {df3[['hand_key', 'max_hand_score',
 #    'avg_hand_score', 'min_crib_score', 'avg_crib_score',
 #    'avg_total_score']].sort_values(by='avg_total_score', ascending=False)}")
-    if your_score is not None and opponent_score is not None:
+    # think there's a small bug here, your_score and opponent_score are initialized to None instead of 0
+    # if your_score is not None and opponent_score is not None:
         # if we are behind, try to maximize avg score
         # if your_score > 90 or opponent_score > 90:
         #     df3 = df3.sort_values(by=["min_total_score", "avg_total_score"], ascending=False)
@@ -134,7 +135,7 @@ def exact_hand_and_min_crib(hand, dealer_is_self, your_score=None, opponent_scor
         #     #     logger.info(f"\n {df3[['hand_key', 'crib_key','min_total_score', 'avg_total_score']]}")                
         #     best_discards_str = df4.iloc[0]["crib_key"]            
         # else:
-        best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
+    best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
     # best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
     best_discards = best_discards_str.lower().replace("t", "10").split("|")
     best_discards_cards = build_hand(best_discards)

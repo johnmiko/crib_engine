@@ -98,9 +98,10 @@ def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
             diff = s1 - s0
         if diff > 0:
             wins += 1
-        elif diff == 0:
+        elif diff == 0:             
              ties += 1
         diffs.append(diff)
     winrate = wins / (num_games - ties)
     lo, hi = wilson_ci(wins, (num_games - ties))    
     return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi, "ties": ties}
+

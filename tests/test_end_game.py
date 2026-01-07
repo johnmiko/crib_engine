@@ -1,9 +1,12 @@
 """Tests for end-of-game scenarios to ensure correct winner determination."""
+import pytest
 from cribbage.cribbagegame import CribbageGame
 from cribbage.cribbageround import CribbageRound
 from cribbage.players.play_first_card_player import PlayFirstCardPlayer
 from cribbage.playingcards import Card, build_hand
 from logging import getLogger
+
+from cribbage.utils import play_game, play_multiple_games, wilson_ci
 
 logger = getLogger(__name__)
 
@@ -179,3 +182,64 @@ def test_p1_counts_second_and_wins_in_crib():
     round1.play()
     assert game.board.get_scores() == [121, 112]
     assert round1.game_winner.name == p1.name, "Expected p1 to be the winner"
+
+def test_p2_wins_on_nibs():
+    p1 = PlayFirstCardPlayer(name="Player1")
+    p2 = PlayFirstCardPlayer(name="Player2")
+    game = CribbageGame(players=[p1, p2], seed=123)
+    
+    # Set both players to 119 points
+    game.board.pegs[p1.name]['front'] = 119
+    game.board.pegs[p1.name]['rear'] = 119
+    game.board.pegs[p2.name]['front'] = 119
+    game.board.pegs[p2.name]['rear'] = 119    
+    # p2 is dealer, so will get the nib points    
+    round1 = MockCribbageRound(game=game, dealer=p2, seed=123, mock_starter_card=Card("jh"), should_populate_crib=True)    
+    round1.hands = {
+        p1.name: build_hand(['3h', '3d', 'ac', 'as', 'ah', 'ad']), 
+        p2.name: build_hand(['3c', '3s', '2c', '2s', '2h', '2d'])  
+    }    
+    round1.play()
+    assert game.board.get_scores() == [119, 121]
+    assert round1.game_winner.name == p2.name, "Expected p2 to be the winner"
+
+
+def test_tie_is_impossible():
+    def play_multiple_end_games(num_games, p0, p1, seed=None) -> dict:
+        wins = 0
+        ties = 0
+        diffs = []
+        for i in range(num_games):
+            # if (i % 100) == 0:
+            logger.info(f"Playing game {i}/{num_games}")
+            if i % 2 == 0:
+                game = CribbageGame(players=[p0, p1], seed=seed)
+            else:
+                game = CribbageGame(players=[p1, p0], seed=seed)
+            game.board.pegs[p0.name]['front'] = 119
+            game.board.pegs[p0.name]['rear'] = 119
+            game.board.pegs[p1.name]['front'] = 119
+            game.board.pegs[p1.name]['rear'] = 119    
+            # Alternate seats because cribbage has dealer advantage
+            if i % 2 == 0:
+                final_pegging_scores = game.start()
+                s0, s1 = (final_pegging_scores[0], final_pegging_scores[1])
+                diff = s0 - s1
+            else:
+                final_pegging_scores = game.start()
+                s0, s1 = (final_pegging_scores[0], final_pegging_scores[1])
+                diff = s1 - s0
+            if diff > 0:
+                wins += 1
+            elif diff == 0:             
+                ties += 1
+            diffs.append(diff)
+        winrate = wins / (num_games - ties)
+        lo, hi = wilson_ci(wins, (num_games - ties))    
+        return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi, "ties": ties}
+    num_games = 500
+    p1 = PlayFirstCardPlayer(name="Player1")
+    p2 = PlayFirstCardPlayer(name="Player2")
+    results = play_multiple_end_games(num_games, p0=p1, p1=p2)    
+    wins, diffs, win_rate, lo, hi, ties = results["wins"], results["diffs"], results["winrate"], results["ci_lo"], results["ci_hi"], results["ties"]
+    assert ties == 0, f"Ties should be impossible but got {ties} ties in {num_games} games"

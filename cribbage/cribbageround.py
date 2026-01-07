@@ -183,7 +183,8 @@ class CribbageRound:
         logger.debug("Starter card is %s." % str(self.starter))
         if self.starter.rank == 'j': # type: ignore
             self.play_record.append(PlayRecord(f"Dealer {self.dealer.name} scores 2 point for heels.", self.table, self.table, 0, self.dealer.name, self.starter, hand=None))
-            self.game.board.peg(self.dealer, 2)            
+            self.game_winner = self.game.board.peg(self.dealer, 2)     
+            return       
             logger.debug("2 points to %s for his heels." % str(self.dealer))
         self.history.starter = str(self.starter)
         active_players = [self.nondealer, self.dealer]
@@ -192,7 +193,6 @@ class CribbageRound:
         while any_player_has_at_least_1_card and self.game_winner is None:
             sequence_start_idx = len(self.table)
             while any_player_has_at_least_1_card and self.game_winner is None:
-                logger.debug(f"In while loop {len(active_players)}")
                 # Create a copy to iterate over, since we modify active_players during iteration
                 players_to_check = list(active_players)
                 for player in players_to_check:
@@ -231,18 +231,18 @@ class CribbageRound:
                             winner = self.game.board.peg(player, score)   
                             if winner is not None:
                                 self.game_winner = winner
-                                break
+                                return
 
                     if self.game_winner is None:
                         if len(players_said_go) == 2:
                             # Everyone has said go                        
-                            logger.debug("All players have said go or reached 31.")                    
+                            logger.debug("All players have said go or reached 31.")  
                             players_to_check = self.go_or_31_reached(players_said_go, self.table[sequence_start_idx:])
                             players_said_go = []
                             sequence_start_idx = len(self.table)
                         any_player_has_at_least_1_card = any(len(hand) > 0 for hand in self.hands.values())
                         if not any_player_has_at_least_1_card:                            
-                            self.game.board.peg(player, 1)
+                            self.game_winner = self.game.board.peg(player, 1)
                             self.play_record.append(PlayRecord(f"{player.name} scores 1 point for last card played", self.table, self.table, self.get_table_value(0),player.name, None, hand=None))
                             self.history.score_after_pegging = [self.game.board.get_score(p) for p in self.game.players]
                             break
@@ -262,6 +262,7 @@ class CribbageRound:
                 if winner is not None:
                     self.game_winner = winner
                     logger.debug(f"Non-dealer {self.nondealer.name} wins!")
+                    return
 
         # Dealer counts second (if game not yet won)
         if self.game_winner is None:
@@ -275,6 +276,7 @@ class CribbageRound:
                 if winner is not None:
                     self.game_winner = winner
                     logger.debug(f"Dealer {self.dealer.name} wins!")
+                    return
 
         # Score the crib (if game not yet won)
         if self.game_winner is None:
@@ -285,6 +287,7 @@ class CribbageRound:
                 winner = self.game.board.peg(self.dealer, score)
                 if winner is not None:
                     self.game_winner = winner
+                    return
 
         self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
         self.history.play_record = self.play_record
@@ -296,7 +299,7 @@ class CribbageRound:
         # last player to say go gets 1 point
         logger.debug(f"In go or 31 {len(players_said_go)}")
         self.play_record.append(PlayRecord(f"{players_said_go[-1].name} scores 1 point for last card played", self.table, self.table, self.get_table_value(0),players_said_go[-1].name, None, hand=None))
-        self.game.board.peg(players_said_go[-1], 1)
+        self.game_winner = self.game.board.peg(players_said_go[-1], 1)
         logger.debug(f"score is {[self.game.board.get_score(p) for p in self.game.players]}")
         return players_said_go
 

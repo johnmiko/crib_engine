@@ -73,7 +73,7 @@ class CribbageGame:
         game_score = [0 for _ in self.players]
         while max(game_score) < self.MAX_SCORE:            
             self.round_seed = self._rng.randint(0, 2**32 - 1) if self.seed is not None else None
-            game_score = self.play_round(game_score, seed=self.round_seed)     
+            game_score = self.play_round(game_score, seed=self.round_seed)        
         return game_score # list of player 1's final peg vs player 2's final peg
 
     def play_round(self, game_score=None, seed=None):
@@ -92,6 +92,10 @@ class CribbageGame:
         r = CribbageRound(self, dealer=dealer, seed=seed)
         r.play()
         game_score = [self.board.get_score(p) for p in self.players]
+        if game_score == [121,121]:
+            message = "tie should not be possible"
+            logger.error(message)
+            raise ValueError(message)
         logger.debug(f"{game_score=}")
         logger.debug(self.board)
         self.round_scores.append(game_score)

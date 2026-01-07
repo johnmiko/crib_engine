@@ -10,6 +10,6 @@ def test_random_player_can_be_seeded():
     crib_cards2 = player2.select_crib_cards(hand.copy(), dealer_is_self=True)
     assert crib_cards1 == crib_cards2, "Crib card selections should be the same for same seed"
     table = build_hand(['4h', '6d'])
-    card_to_play1 = player1.select_card_to_play(hand.copy(), table.copy(), crib_cards1, count=10)
-    card_to_play2 = player2.select_card_to_play(hand.copy(), table.copy(), crib_cards2, count=10)
+    card_to_play1 = player1.select_card_to_play(hand.copy(), table.copy(), count=10, crib=crib_cards1)
+    card_to_play2 = player2.select_card_to_play(hand.copy(), table.copy(), count=10, crib=crib_cards2)
     assert card_to_play1 == card_to_play2, "Card to play selections should be the same for same seed"

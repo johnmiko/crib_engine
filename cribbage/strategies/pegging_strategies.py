@@ -21,7 +21,7 @@ def basic_pegging_strategy(playable: List[Card], count: int, history_since_reset
     best_pts = 1
     for c in playable:
         sequence = history_since_reset + [c]
-        pts = score_play(sequence)
+        pts, _ = score_play(sequence)  # Unpack tuple (score, description)
         if (pts >= best_pts) and (c + count <= 31):
             best_pts = pts
             best_card_choices.append(c)
@@ -59,7 +59,7 @@ def medium_pegging_strategy(playable: List[Card], count: int, history_since_rese
         if c.get_value() + count > 31:
             continue  # Skip cards that would bust
         sequence = history_since_reset + [c]
-        pts = score_play(sequence)
+        pts, _ = score_play(sequence)  # Unpack tuple (score, description)
         if pts >= best_pts:
             if pts > best_pts:
                 best_pts = pts

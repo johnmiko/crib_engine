@@ -1,10 +1,30 @@
-Get tests passing in crib_engine
-get tests passing in crib_back
-Refactor crib_engine and crib_back to use more of the same code
+Round did not end early when I won by pegging
+    add test_end_game_scenarios
 
 Want to add a description to the players so we know what they are doing
+    display what their strategies are
+
+Add a "logging" for the plays, or just have a "play history" + "score history" thing
+    So that everything is either logged to a file, or I can pull it up when playing
+    Round 1 Start
+    Player 1 deals
+    Starter card is x
+    Player 2 plays card 10d at count 0
 
 
+The component is designed to easily incorporate detailed pegging events when the backend adds them. The infrastructure checks for:
+
+"15 for 2"
+"31 for 2"
+"pair for 2"
+"run for X"
+"nibs for 2"
+"last card for 1"
+"opponent says go"
+When the backend's GameStateResponse is enhanced to include these events (perhaps as a pegging_event or last_scoring_event field), you can simply update the GameInfo component to display them during the pegging phase.
+
+📍 Layout:
+This design keeps players informed about what's happening without cluttering the buttons, and provides a clean place for all contextual game information. Everything is working without errors!
 
 
 

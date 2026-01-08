@@ -226,21 +226,25 @@ class HasFlush(ScoreCondition):
         return score, description
 
 def score_play(card_seq):
-    """Return score for latest move in an active play sequence.
+    """Return score and description for latest move in an active play sequence.
 
     :param card_seq: List of all cards played (oldest to newest).
-    :return: Points earned by player of latest card played in the sequence.
+    :return: Tuple of (points, description) earned by player of latest card played in the sequence.
     """
     score = 0
+    descriptions = []
     score_scenarios = [ExactlyEqualsN(n=15),
                         HasPairTripleQuad(), HasStraight_DuringPlay()]
         
     for scenario in score_scenarios:
         s, desc = scenario.check(card_seq[:])
-        score += s
-        if desc:
+        if s > 0 and desc:
+            score += s
+            descriptions.append(desc)
             logger.debug("[SCORE] " + desc)
-    return score
+    
+    description = ", ".join(descriptions) if descriptions else ""
+    return score, description
 
 
 def score_hand(cards, is_crib: bool = False, starter_card=None):

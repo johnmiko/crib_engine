@@ -38,7 +38,7 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 #     logger.info(f"BeginnerPlayer wins: {wins}/{num_games} ({win_rate:.2%})")
 #     assert win_rate > 0.98, "BeginnerPlayer should win at least 98% of the time against PlayFirstCardPlayer"        
 
-# @pytest.mark.super_slow
+@pytest.mark.super_slow
 def test_beginner_vs_medium_player():
     # with just medium pegging, average score difference = 1.63 and winrate= 161/300=53.67%
     # with medium pegging + discarding, average score difference per game = 3.67 and winrate= 175/300=58.33%

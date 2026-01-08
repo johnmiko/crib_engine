@@ -49,9 +49,9 @@ def play_multiple_hands(num_games, p0, p1, seed=None) -> dict:
     lo, hi = wilson_ci(wins, (num_games - ties))    
     return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi, "ties": ties}
 
-@pytest.mark.slow
+@pytest.mark.super_slow
 def test_beginner_vs_medium_player_pegging_strategies():
-    num_games = 300
+    num_games = 500
     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
     medium_player = MediumPlayer(name="MediumPlayer")    
     results = play_multiple_hands(num_games, p0=medium_player, p1=beginner_player)    

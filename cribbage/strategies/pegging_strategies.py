@@ -71,6 +71,10 @@ def medium_pegging_strategy(playable: List[Card], count: int, history_since_rese
         # If we have scoring options, pick the highest-value card among them
         return get_highest_rank_card(best_card_choices)
     
+    best_card_choice = set_self_up_for_points(playable, count, history_since_reset)
+    if best_card_choice:
+        return best_card_choice
+
     # No scoring available, use strategic scoring system
     card_scores = []
     
@@ -98,6 +102,7 @@ def medium_pegging_strategy(playable: List[Card], count: int, history_since_rese
         # Check if this sets up a run for opponent
         if len(history_since_reset) > 0:
             if _sets_up_run(history_since_reset, c):
+                # opponent has approx 2/13 chance of having the needed card to score 3 points
                 score -= 0.462  # 2/13 * -3 = -6/13
         
         # Add card value as tiebreaker (prefer higher cards when equal)
@@ -143,3 +148,51 @@ def _sets_up_run(history: List[Card], new_card: Card) -> bool:
     
     return False
 
+def set_self_up_for_points(playable, count, history_since_reset):
+    """
+    Try to set self up for future points when starting a new sequence (count == 0).
+    Returns the card to play, or None if no strategic setup is found.
+    """
+    # Only apply this strategy when starting a new sequence
+    if count != 0:
+        return None
+    
+    # Group cards by rank to find pairs/triples
+    rank_groups = {}
+    for card in playable:
+        rank = card.rank_order
+        if rank not in rank_groups:
+            rank_groups[rank] = []
+        rank_groups[rank].append(card)
+    
+    # Priority 1: Pairs/triples of rank 1-9 (play one to set up for triple)
+    for rank, cards in rank_groups.items():
+        if len(cards) >= 2 and rank <= 9:
+            return cards[0]
+    
+    # Priority 2: Specific rank combinations to set up 15s or pairs
+    playable_ranks = set(c.rank_order for c in playable)
+    
+    # If we have 2 and 3, play 3 (opponent plays 10 → we play 2 for 15)
+    if 2 in playable_ranks and 3 in playable_ranks:
+        return next(c for c in playable if c.rank_order == 3)
+    
+    # If we have A (1) and 4, play 4 (opponent plays 10 → we play A for 15)
+    if 1 in playable_ranks and 4 in playable_ranks:
+        return next(c for c in playable if c.rank_order == 4)
+    
+    # If we have 7 and 8, play 8 (opponent plays 7 → we pair for 2)
+    if 7 in playable_ranks and 8 in playable_ranks:
+        return next(c for c in playable if c.rank_order == 8)
+    
+    # If we have 6 and 9, play 6 (opponent plays 9 → we pair for 2)
+    if 6 in playable_ranks and 9 in playable_ranks:
+        return next(c for c in playable if c.rank_order == 6)
+    
+    # Priority 3: Pairs/triples of rank 10+ (play one to set up for triple)
+    for rank, cards in rank_groups.items():
+        if len(cards) >= 2 and rank >= 10:
+            return cards[0]
+    
+    # No strategic play found
+    return None    

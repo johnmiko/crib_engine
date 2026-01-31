@@ -44,7 +44,8 @@ class GameStateResponse(BaseModel):
     valid_card_indices: List[int]  # Which cards from hand can be played
     game_over: bool = False
     winner: Optional[str] = None
+    win_reason: Optional[str] = None  # Detailed reason for how the game was won
     computer_hand_count: Optional[int] = None
     round_summary: Optional[Dict] = None
-    points_pegged: Optional[List[int]] = None
+    pegging_scores: Optional[Dict[str, int]] = None  # Scores after pegging, before hand counting
     recent_play_events: Optional[List[str]] = None  # Most recent play events for display    

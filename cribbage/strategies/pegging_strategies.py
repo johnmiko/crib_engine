@@ -98,6 +98,9 @@ def medium_pegging_strategy(playable: List[Card], count: int, history_since_rese
             score += 0.1  # Safe
         elif new_count == 21:
             score -= 0.615  # Same as 5 (likely opponent has 10)
+        if count == 0 and c.get_value() == 10:
+            # Not sure what the exact probability is but we should not play a 10 first if possible
+            score -= 0.1
         
         # Check if this sets up a run for opponent
         if len(history_since_reset) > 0:
@@ -188,6 +191,9 @@ def set_self_up_for_points(playable, count, history_since_reset):
     # If we have 6 and 9, play 6 (opponent plays 9 → we pair for 2)
     if 6 in playable_ranks and 9 in playable_ranks:
         return next(c for c in playable if c.rank_order == 6)
+    
+    if 5 in playable_ranks and ((10 in playable_ranks) or (11 in playable_ranks) or (12 in playable_ranks) or (13 in playable_ranks)):
+        return next(c for c in playable if c.rank_order > 9)
     
     # Priority 3: Pairs/triples of rank 10+ (play one to set up for triple)
     for rank, cards in rank_groups.items():

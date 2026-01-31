@@ -1,4 +1,4 @@
-from cribbage.strategies.pegging_strategies import medium_pegging_strategy, basic_pegging_strategy
+from cribbage.strategies.pegging_strategies import medium_pegging_strategy, basic_pegging_strategy, set_self_up_for_points
 from cribbage.playingcards import Card, build_hand
 import pytest
 
@@ -184,3 +184,22 @@ def test_medium_pegging_strategy_vs_basic():
     # Basic plays highest (4), medium avoids count 5
     assert basic_choice.rank == '2', "Basic should play highest"
     assert medium_choice.rank == 'a', "Medium should avoid count of 5"
+
+def test_set_self_up_for_points():
+    """Test the set_self_up_for_points helper function."""
+    # count is 0, has 8 8 9 J, played jack
+
+    # Test case where playing a card sets up for a run
+    playable = build_hand(['8h', '8d', '9c', 'js'])
+    history = []
+    count = 0
+    card = set_self_up_for_points(playable, count, history)
+    assert card == Card('8h')
+
+def test_medium_pegging_strategy_set_self_up_for_points():
+    # added set self up for points logic
+    playable = build_hand(['8h', '8d', '9c', 'js'])
+    history = []
+    count = 0
+    card = medium_pegging_strategy(playable, count, history)
+    assert card == Card('8h')

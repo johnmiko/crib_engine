@@ -1,5 +1,7 @@
-Round did not end early when I won by pegging
-    add test_end_game_scenarios
+medium_pegging_strategy
+    bug count is 0, has 8 8 9 J, played jack
+
+
 
 Want to add a description to the players so we know what they are doing
     display what their strategies are

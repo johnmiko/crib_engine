@@ -203,3 +203,8 @@ def test_medium_pegging_strategy_set_self_up_for_points():
     count = 0
     card = medium_pegging_strategy(playable, count, history)
     assert card == Card('8h')
+    playable = build_hand(['2h', '5d', 'jc', 'qs'])
+    history = []
+    count = 0
+    card = medium_pegging_strategy(playable, count, history)
+    assert card == Card('jc')

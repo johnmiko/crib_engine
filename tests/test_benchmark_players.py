@@ -42,7 +42,11 @@ def test_random_vs_first_card_player_seeded_results_are_always_the_same():
 def test_beginner_vs_medium_player():
     # with just medium pegging, average score difference = 1.63 and winrate= 161/300=53.67%
     # with medium pegging + discarding, average score difference per game = 3.67 and winrate= 175/300=58.33%
-    num_games = 300
+    # After adding in set_self_up_for_points to medium pegging strategy
+    # Ties after pegging: 0/500
+    # Average pegging score difference (medium - beginner): 5.68
+    # medium_player wins: 297/500 (59.40% CI: 55.04%-63.62%)
+    num_games = 500
     beginner_player = BeginnerPlayer(name="BeginnerPlayer")
     medium_player = MediumPlayer(name="MediumPlayer")    
     results = play_multiple_games(num_games, p0=medium_player, p1=beginner_player)    

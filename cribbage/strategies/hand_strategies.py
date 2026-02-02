@@ -9,6 +9,7 @@ from cribbage.players.rule_based_player import get_full_deck
 from cribbage.playingcards import Card, build_hand
 from cribbage.scoring import score_hand
 
+import logging
 
 def calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache):
     # Compute scores
@@ -120,7 +121,7 @@ def exact_hand_and_min_crib(hand, dealer_is_self, your_score=None, opponent_scor
     df3 = pd.merge(df_hand, df_crib, on=["hand_key"])        
     df3["avg_total_score"] = df3["avg_hand_score"] + (df3["avg_crib_score"] if dealer_is_self else -df3["avg_crib_score"])
     df3["min_total_score"] = df3["min_hand_score"] + (df3["min_crib_score"] if dealer_is_self else -df3["min_crib_score"])
-    import logging
+    
     logger = logging.getLogger(__name__)
 #     logger.info(f"\n {df3[['hand_key', 'max_hand_score',
 #    'avg_hand_score', 'min_crib_score', 'avg_crib_score',

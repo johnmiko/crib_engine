@@ -95,7 +95,7 @@ def medium_pegging_strategy(playable: List[Card], count: int, history_since_rese
         elif new_count == 15:
             score += 2.0  # This scores points, but shouldn't reach here
         elif 16 <= new_count <= 20:
-            score += 0.1  # Safe
+            score += 0.0  # Safe
         elif new_count == 21:
             score -= 0.615  # Same as 5 (likely opponent has 10)
         if count == 0 and c.get_value() == 10:
@@ -202,3 +202,158 @@ def set_self_up_for_points(playable, count, history_since_reset):
     
     # No strategic play found
     return None    
+
+
+
+def calc_card_play_points_scored(playable, count, history_since_reset, scores):
+    for c in playable:
+        if c.get_value() + count > 31:
+            continue  # Skip cards that would bust
+        sequence = history_since_reset + [c]
+        pts, _ = score_play(sequence)  # Unpack tuple (score, description)
+        scores[c] = pts      
+    return scores
+
+def calc_set_self_up_for_points_scores(playable, count, history_since_reset, scores):
+    """
+    Try to set self up for future points when starting a new sequence (count == 0).
+    Returns the card to play, or None if no strategic setup is found.
+    """
+    # Only apply this strategy when starting a new sequence
+    if count != 0:
+        return scores
+    
+    # Group cards by rank to find pairs/triples
+    rank_groups = {}
+    for card in playable:
+        rank_order = card.rank_order
+        if rank_order not in rank_groups:
+            rank_groups[rank_order] = []
+        rank_groups[rank_order].append(card)
+    
+    # Priority 1: Pairs/triples of rank 1-9 (play one to set up for triple)
+    for rank_order, cards in rank_groups.items():
+        if len(cards) >= 2:
+            # Estimated positive score
+            # to make this dynamic and accurate would need to have "cards remaining" to calculate this
+            # 0/13 chance opponent can score 15 2
+            # Assume we have a pair and not a triple
+            # 2/46 chance opponent can score pair for 2 and then we score 6 for triple (net 4 points)
+            # score = 2/46 * 4 = 0.1739
+            for card in cards:
+                if rank_order < 5:                
+                    scores[card] = 0.1739
+                if rank_order == 5:                    
+                    # 4/13 chance opponent can score 15 for 2 points
+                    # score = 2/46 * 4 - 4/13 = -0.1338
+                    scores[card] = -0.1338
+                if rank_order > 5 and rank_order < 10:                    
+                    # 1/13 chance opponent can score 15 for 2 points
+                    # score = 2/46 * 4 - 1/13 = 0.0965
+                    scores[card] = 0.0970
+                if rank_order >= 10:                    
+                    # estimate the chance they have a 5 as 0.2
+                    # score = 2/46 * 4 - 0.2 = -0.026
+                    scores[card] = -0.026                            
+    
+    # Priority 2: Specific rank combinations to set up 15s or pairs
+    playable_ranks = set(c.rank_order for c in playable)
+    
+    # If we have 2 and 3, play 3 (opponent plays 10 → we play 2 for 15)
+    if 2 in playable_ranks and 3 in playable_ranks:
+        card = next(c for c in playable if c.rank_order == 3)        
+        scores[card] = 0.308 # 4/13
+        card = next(c for c in playable if c.rank_order == 2)
+        scores[card] = 0.208
+    
+    # If we have A (1) and 4, play 4 (opponent plays 10 → we play A for 15)
+    if 1 in playable_ranks and 4 in playable_ranks:
+        card = next(c for c in playable if c.rank_order == 4)        
+        scores[card] = 0.308 # 4/13
+        card = next(c for c in playable if c.rank_order == 1)
+        scores[card] = 0.208
+    
+    # If we have 7 and 8, play 8 (opponent plays 7 → we pair for 2)
+    if 7 in playable_ranks and 8 in playable_ranks:
+        card = next(c for c in playable if c.rank_order == 8)        
+        scores[card] = 0.0
+        card = next(c for c in playable if c.rank_order == 7)
+        scores[card] = -0.01
+    
+    # If we have 6 and 9, play 6 (opponent plays 9 → we pair for 2)
+    if 6 in playable_ranks and 9 in playable_ranks:
+        card = next(c for c in playable if c.rank_order == 6)        
+        scores[card] = 0.0
+        card = next(c for c in playable if c.rank_order == 9)
+        scores[card] = -0.01
+    
+    if 5 in playable_ranks and ((10 in playable_ranks) or (11 in playable_ranks) or (12 in playable_ranks) or (13 in playable_ranks)):
+        for c in playable:
+            if c.rank_order > 9:
+                scores[card] = 0
+    return scores   
+
+
+
+
+def medium_pegging_strategy_scores(playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
+    best_card_choices = []
+    best_pts = 1
+    scores = {}    
+    scores = calc_card_play_points_scored(playable, count, history_since_reset, scores)
+    unscored_playable = [c for c in playable if scores.get(c) == 0]
+    scores = calc_set_self_up_for_points_scores(unscored_playable, count, history_since_reset, scores)
+    if best_card_choice:
+        return best_card_choice
+
+    # No scoring available, use strategic scoring system
+    card_scores = []
+    
+    for c in playable:
+        if c.get_value() + count > 31:
+            continue  # Skip cards that would bust
+        
+        new_count = count + c.get_value()
+        score = 0.0
+        
+        # Count-based scoring (probability-based)
+        if 1 <= new_count <= 4:
+            score -= 0.05  # Safe but wasteful for scoring last card or 31
+        elif new_count == 5:
+            score -= 0.615  # 4/13 * -2 = -8/13 (likely opponent has 10)
+        elif 6 <= new_count <= 14:
+            score -= 0.077  # -1/13 (slightly unsafe)
+        elif new_count == 15:
+            score += 2.0  # This scores points, but shouldn't reach here
+        elif 16 <= new_count <= 20:
+            score += 0.1  # Safe
+        elif new_count == 21:
+            score -= 0.615  # Same as 5 (likely opponent has 10)
+        if count == 0 and c.get_value() == 10:
+            # Not sure what the exact probability is but we should not play a 10 first if possible
+            score -= 0.1
+        
+        # Check if this sets up a run for opponent
+        if len(history_since_reset) > 0:
+            if _sets_up_run(history_since_reset, c):
+                # opponent has approx 2/13 chance of having the needed card to score 3 points
+                score -= 0.462  # 2/13 * -3 = -6/13
+        
+        # Add card value as tiebreaker (prefer higher cards when equal)
+        # score += c.rank_order * 0.01
+        
+        card_scores.append((c, score))
+    
+    if not card_scores:
+        return None  # No playable cards
+    
+    # Return card with highest score
+    card_scores.sort(key=lambda x: x[1], reverse=True)
+    max_points = max(v for _, v in card_scores)
+    highest_scoring_cards_list = [k for k, v in card_scores if v == max_points]
+    highest_scoring_card = get_highest_rank_card(highest_scoring_cards_list)
+    # if best_card_choices:
+    #     # If we have multiple scoring options, pick the highest-value card among them
+    #     return get_highest_rank_card(best_card_choices)
+    return highest_scoring_card
+

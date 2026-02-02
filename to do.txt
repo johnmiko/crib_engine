@@ -1,5 +1,6 @@
-medium_pegging_strategy
-    bug count is 0, has 8 8 9 J, played jack
+In crib_ai_trainer2 generate_il_data
+    Need to at least rewrite select_card_to_play to use the new method
+    Maybe also need to rewrite the select cards to crib
 
 
 

@@ -129,7 +129,7 @@ class MediumPlayer(BeginnerPlayer):
     def __init__(self, name: str = "medium"):
         super().__init__(name=name)
 
-    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card], game_state=None) -> Optional[Card]:
         return medium_pegging_strategy(playable, count, history_since_reset)
     
     def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None) -> Tuple[Card, Card]:                

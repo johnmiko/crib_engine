@@ -15,16 +15,15 @@ class RandomPlayer(BasePlayer):
     def reset_rng(self):
         self._rng = random.Random(self.seed)
 
-    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool, your_score: int = 0, opponent_score: int = 0, game_state=None) -> Tuple[Card, Card]:        
-        return tuple(self._rng.sample(hand, 2))  # type: ignore
+    def select_crib_cards(self, player_state, round_state) -> Tuple[Card, Card]:        
+        return tuple(self._rng.sample(player_state.hand, 2))  # type: ignore
 
-    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card], game_state=None) -> Optional[Card]:
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
         return self._rng.choice(playable) if playable else None
 
-    def select_card_to_play(self, hand: List[Card], table, count: int, crib=None, game_state=None):
-        # table is the list of cards currently on the table
-        
-        playable_cards = [c for c in hand if c + count <= 31]
+    def select_card_to_play(self, player_state, round_state) -> Optional[Card]:
+        # Get playable cards
+        playable_cards = [c for c in player_state.hand if c + round_state.count <= 31]
         if not playable_cards:
             return None
-        return self.play_pegging(playable_cards, count, table, game_state=game_state)
+        return self.play_pegging(playable_cards, round_state.count, round_state.table_cards)

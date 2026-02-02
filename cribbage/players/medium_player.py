@@ -129,10 +129,15 @@ class MediumPlayer(BeginnerPlayer):
     def __init__(self, name: str = "medium"):
         super().__init__(name=name)
 
-    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card], game_state=None) -> Optional[Card]:
-        return medium_pegging_strategy(playable, count, history_since_reset, game_state=game_state)
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
+        return medium_pegging_strategy(playable, count, history_since_reset)
     
-    def select_crib_cards(self, hand, dealer_is_self, your_score=None, opponent_score=None, game_state=None) -> Tuple[Card, Card]:                
+    def select_crib_cards(self, player_state, round_state) -> Tuple[Card, Card]:                
         # best_discards = exact_hand_and_fast_crib(hand, dealer_is_self)
-        best_discards = exact_hand_and_min_crib(hand, dealer_is_self, your_score=your_score, opponent_score=opponent_score, game_state=game_state)
+        best_discards = exact_hand_and_min_crib(
+            player_state.hand, 
+            player_state.is_dealer, 
+            your_score=player_state.score, 
+            opponent_score=None  # TODO: Need to pass opponent score via round_state or player_state
+        )
         return best_discards

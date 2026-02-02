@@ -9,20 +9,43 @@ from cribbage.playingcards import Deck
 from typing import List, Dict, Optional
 from cribbage import scoring
 
+
+class PlayerState:
+    """State for a single player in the current round."""
+    
+    def __init__(
+        self,
+        hand: List[Card],
+        score: int,
+        is_dealer: bool,
+        known_cards: Optional[List[Card]] = None,
+        opponent_known_hand: Optional[List[Card]] = None
+    ):
+        self.hand = hand
+        self.score = score
+        self.is_dealer = is_dealer
+        self.known_cards = known_cards if known_cards is not None else []
+        self.opponent_known_hand = opponent_known_hand if opponent_known_hand is not None else []
+
+
 class RoundState:
-    def __init__(self, game, dealer, seed: int | None = None):
-        self._rng = random.Random(seed)
-        self.deck = Deck(seed=seed)
-        self.game_winner = None
-        self.game = game
-        self.hands = {player: [] for player in self.game.players}
-        self.player_hand_after_discard = {player: [] for player in self.game.players}
-        self.crib = []
-        self.table = []
-        self.starter = None
-        self.dealer = dealer
-        self.nondealer = [p for p in self.game.players if p != dealer][0]
-        self.most_recent_player = None
+    """State of the current round shared between players."""
+    
+    def __init__(
+        self,
+        starter_card: Optional[Card],
+        count: int,
+        table_cards: List[Card],
+        all_played_cards: List[Card],
+        crib: List[Card],
+        dealer_name: str
+    ):
+        self.starter_card = starter_card
+        self.count = count
+        self.table_cards = table_cards  # Current active sequence
+        self.all_played_cards = all_played_cards  # All cards played this round
+        self.crib = crib
+        self.dealer_name = dealer_name
  
 
 class GameState:

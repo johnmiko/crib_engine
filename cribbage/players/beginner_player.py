@@ -16,15 +16,15 @@ class BeginnerPlayer(BasePlayer):
     def __init__(self, name: str = "beginner"):
         self.name = name
 
-    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool, your_score=None, opponent_score=None, game_state=None) -> Tuple[Card, Card]:
-        return basic_crib_strategy(hand, dealer_is_self, game_state=game_state)
+    def select_crib_cards(self, player_state, round_state) -> Tuple[Card, Card]:
+        return basic_crib_strategy(player_state.hand, player_state.is_dealer)
 
-    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card], game_state=None) -> Optional[Card]:
-        return basic_pegging_strategy(playable, count, history_since_reset, game_state=game_state)
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
+        return basic_pegging_strategy(playable, count, history_since_reset)
 
-    def select_card_to_play(self, hand: List[Card], table, count: int, crib=None, game_state=None):
-        # table is the list of cards currently on the table
-        playable_cards = [c for c in hand if c + count <= 31]
+    def select_card_to_play(self, player_state, round_state) -> Optional[Card]:
+        # Get playable cards
+        playable_cards = [c for c in player_state.hand if c + round_state.count <= 31]
         if not playable_cards:
             return None
-        return self.play_pegging(playable_cards, count, table, game_state=game_state)
+        return self.play_pegging(playable_cards, round_state.count, round_state.table_cards)

@@ -9,6 +9,7 @@ from cribbage.strategies.hand_strategies import process_dealt_hand_only_exact
 from cribbage.players.medium_player import MediumPlayer
 from cribbage.players.rule_based_player import get_full_deck
 from cribbage.playingcards import build_hand
+from conftest import make_player_state, make_round_state
 import pandas as pd
 
 from cribbage.scoring import score_hand
@@ -104,14 +105,18 @@ pd.set_option("display.width", None)
 def test_medium_player_chooses_correct_discard_simple_hand():
     player = MediumPlayer()
     hand = build_hand(["ac","ad","ah","as","2h","2d"])
-    crib_cards = player.select_crib_cards(hand, dealer_is_self=True)
+    player_state = make_player_state(hand, is_dealer=True)
+    round_state = make_round_state()
+    crib_cards = player.select_crib_cards(player_state, round_state)
     assert set(crib_cards) == set(build_hand(["2d","2h"]))
 
 
 def test_medium_player_chooses_correct_discard():
     player = MediumPlayer()
     hand = build_hand(RUN_FLUSH_HAND)
-    crib_cards = player.select_crib_cards(hand, dealer_is_self=True)
+    player_state = make_player_state(hand, is_dealer=True)
+    round_state = make_round_state()
+    crib_cards = player.select_crib_cards(player_state, round_state)
     assert set(crib_cards) == set(build_hand(["7h","8h"]))
 
 # def test_min_hand_calc_is_correct():
@@ -353,7 +358,9 @@ def test_medium_player_chooses_correct_discard_specific_hand():
     # discard 4 k = 5.43 - 2.89 = 2.54
     # (difference of 2, so should obviously be the first option))
     hand = build_hand(['3d', '4c', '6d', '6s', '10c', 'kd'])
-    crib_cards = player.select_crib_cards(hand, dealer_is_self=False)
+    player_state = make_player_state(hand, is_dealer=False)
+    round_state = make_round_state()
+    crib_cards = player.select_crib_cards(player_state, round_state)
     assert crib_cards == tuple(build_hand(["10c","kd"]))
 
 @pytest.mark.super_slow

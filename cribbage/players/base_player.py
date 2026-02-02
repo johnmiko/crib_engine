@@ -1,6 +1,8 @@
 """Agents that interact with the CribbageGame."""
 import random
 from abc import ABCMeta, abstractmethod
+from typing import Optional, List
+from cribbage.playingcards import Card
 
 
 class BasePlayer(metaclass=ABCMeta):
@@ -19,25 +21,24 @@ class BasePlayer(metaclass=ABCMeta):
         return self.name
 
     @abstractmethod
-    def select_crib_cards(self, hand):
+    def select_crib_cards(self, player_state, round_state):
         """Select cards to place in crib.
 
-        :param hand: list containing the cards in the player's hand
-        :return: list of cards to place in crib
+        :param player_state: PlayerState object with hand, score, is_dealer, known_cards
+        :param round_state: RoundState object with starter_card, count, table_cards, etc.
+        :return: list of 2 cards to place in crib
         """
         raise NotImplementedError
 
     @abstractmethod
-    def select_card_to_play(self, hand, table, count, crib=None):
+    def select_card_to_play(self, player_state, round_state) -> Optional[Card]:
         """Select next card to play.
 
-        :param hand: list containing the cards in the player's hand
-        :param table: list of all cards that have been played so far during the current round (by all players)
-        :param crib: list of cards that the player has placed in the crib
-        :return: card to play
+        :param player_state: PlayerState object with hand, score, is_dealer, known_cards
+        :param round_state: RoundState object with starter_card, count, table_cards, etc.
+        :return: card to play or None if must say go
         """
         raise NotImplementedError
-
 
 
 class HumanPlayer(BasePlayer):
@@ -69,11 +70,11 @@ class HumanPlayer(BasePlayer):
                     cards_selected.append(cards[idx-1])
         return cards_selected
 
-    def select_crib_cards(self, hand, dealer_is_self):
-        return self.present_cards_for_selection(cards=hand, n_cards=2)
+    def select_crib_cards(self, player_state, round_state):
+        return self.present_cards_for_selection(cards=player_state.hand, n_cards=2)
 
-    def select_card_to_play(self, hand, table, crib):
-        return self.present_cards_for_selection(cards=hand, n_cards=1)[0]
+    def select_card_to_play(self, player_state, round_state):
+        return self.present_cards_for_selection(cards=player_state.hand, n_cards=1)[0]
 
 class HumanPlayerAPI(HumanPlayer):
     """Interface for a human user to play."""

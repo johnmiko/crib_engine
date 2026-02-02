@@ -3,7 +3,7 @@ import random
 
 from cribbage import scoring
 from cribbage.playingcards import Card, Deck
-from cribbage.state import RoundState
+from cribbage.state import PlayerState, RoundState
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +82,51 @@ class CribbageRound:
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p.name != dealer.name][0]
         self.most_recent_player = None        
-        self.round_state = RoundState(self.game, dealer=dealer, seed=seed)
         self.play_record = []
         self.history = RoundHistory()
 
     def __str__(self) -> str:
         return str(self.history)
+
+    def _build_player_state(self, player, sequence_start_idx=0) -> PlayerState:
+        """Build PlayerState for a player at current game state.
+        
+        :param player: The player object
+        :param sequence_start_idx: Start index of current sequence
+        :return: PlayerState object
+        """
+        opponent = [p for p in self.game.players if p.name != player.name][0]
+        
+        # Build known_cards: hand + table + starter (if cut)
+        known_cards = self.hands[player.name][:] + self.table[:]
+        if self.starter:
+            known_cards.append(self.starter)
+        
+        # Build opponent_known_hand: cards opponent has played
+        opponent_known_hand = [card for card in self.table if card in self.hands.get(opponent.name, [])]
+        
+        return PlayerState(
+            hand=self.hands[player.name][:],
+            score=self.game.board.get_score(player),
+            is_dealer=(player == self.dealer),
+            known_cards=known_cards,
+            opponent_known_hand=opponent_known_hand
+        )
+    
+    def _build_round_state(self, sequence_start_idx=0) -> RoundState:
+        """Build RoundState at current game state.
+        
+        :param sequence_start_idx: Start index of current sequence
+        :return: RoundState object
+        """
+        return RoundState(
+            starter_card=self.starter,
+            count=self.get_table_value(sequence_start_idx),
+            table_cards=self.table[sequence_start_idx:],  # Current active sequence
+            all_played_cards=self.table[:],  # All cards played
+            crib=self.crib[:],
+            dealer_name=self.dealer.name
+        )
 
     def _record_and_peg(self, player, points: int, description: str, card=None, sequence_start_idx=0):
         """Record a scoring event and update the board. Always maintains consistent order.
@@ -153,14 +192,14 @@ class CribbageRound:
 
         :return: None
         """        
-        player_scores_dict = {}
         for pi, player in self.game.players_dict.items():
-            player_scores_dict[player.name] = self.game.board.get_score(player)
-        for pi, player in self.game.players_dict.items():                        
-            player_score = player_scores_dict[player.name]
-            other_player_name = [next(name for name in player_scores_dict.keys() if name != player.name)]
-            opponent_score = player_scores_dict[other_player_name[0]]
-            cards_to_crib = player.select_crib_cards(hand=self.hands[pi], dealer_is_self=(player == self.dealer), your_score=player_score, opponent_score=opponent_score)
+            # Build state objects for this player
+            player_state = self._build_player_state(player)
+            round_state = self._build_round_state()
+            
+            # Call player's select_crib_cards with new API
+            cards_to_crib = player.select_crib_cards(player_state, round_state)
+            
             logger.debug(f"{player.name} cribs: {cards_to_crib} when dealt hand {self.hands[pi]}")
             if not set(cards_to_crib).issubset(set(self.hands[pi])):
                 raise IllegalCardChoiceError("Crib cards selected are not part of player's hand.")
@@ -276,10 +315,15 @@ class CribbageRound:
                     logger.debug(f"score is {[self.game.board.get_score(p) for p in self.game.players]}")
                     logger.debug(f"Player {player.name}'s turn to play.")
                     logger.debug(f"active table cards {self.table[sequence_start_idx:]}")
-                    count = self.get_table_value(sequence_start_idx)                                           
-                    card = player.select_card_to_play(hand=self.hands[player.name], table=self.table[sequence_start_idx:],
-                                                 count=count, crib=self.crib)  
-                    if card is None or card.get_value() + count > 31:
+                    
+                    # Build state objects
+                    player_state = self._build_player_state(player, sequence_start_idx)
+                    round_state = self._build_round_state(sequence_start_idx)
+                    
+                    # Call player's select_card_to_play with new API
+                    card = player.select_card_to_play(player_state, round_state)
+                    
+                    if card is None or card.get_value() + round_state.count > 31:
                         logger.debug("Player %s chooses go." % str(player))
                         self._record_non_scoring_event(player, "Go", card=None, sequence_start_idx=sequence_start_idx)
                         loser = loser if loser else player                        
@@ -288,7 +332,7 @@ class CribbageRound:
                         # Record the card play (non-scoring event)
                         self._record_non_scoring_event(player, f"Plays {str(card)}", card=card, sequence_start_idx=sequence_start_idx)
                         self.table.append(card)
-                        logger.debug(f"Player {player.name} selected card {card} at count {count} to {self.get_table_value(sequence_start_idx)}")
+                        logger.debug(f"Player {player.name} selected card {card} at count {round_state.count} to {self.get_table_value(sequence_start_idx)}")
                         
                         # Check for 31
                         if self.get_table_value(sequence_start_idx) == 31:

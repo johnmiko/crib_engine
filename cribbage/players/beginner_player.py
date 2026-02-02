@@ -16,15 +16,15 @@ class BeginnerPlayer(BasePlayer):
     def __init__(self, name: str = "beginner"):
         self.name = name
 
-    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool, your_score=None, opponent_score=None) -> Tuple[Card, Card]:
-        return basic_crib_strategy(hand, dealer_is_self)
+    def select_crib_cards(self, hand: List[Card], dealer_is_self: bool, your_score=None, opponent_score=None, game_state=None) -> Tuple[Card, Card]:
+        return basic_crib_strategy(hand, dealer_is_self, game_state=game_state)
 
-    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:
-        return basic_pegging_strategy(playable, count, history_since_reset)
+    def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card], game_state=None) -> Optional[Card]:
+        return basic_pegging_strategy(playable, count, history_since_reset, game_state=game_state)
 
-    def select_card_to_play(self, hand: List[Card], table, count: int, crib=None):
+    def select_card_to_play(self, hand: List[Card], table, count: int, crib=None, game_state=None):
         # table is the list of cards currently on the table
         playable_cards = [c for c in hand if c + count <= 31]
         if not playable_cards:
             return None
-        return self.play_pegging(playable_cards, count, table)
+        return self.play_pegging(playable_cards, count, table, game_state=game_state)

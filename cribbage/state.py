@@ -42,7 +42,7 @@ class GameState:
         assert len(players) == 2, "Currently, only 2-player games are supported."
         # self.game_state = GameState(self.players, seed=seed)
         self.rounds = []
-        rounds = []
+        rounds = []        
         
         # Player hands
         # self.human_hand: List[Card] = []

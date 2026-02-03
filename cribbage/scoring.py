@@ -42,13 +42,13 @@ class HasPairTripleQuad(ScoreCondition):
                 last.pop()
             if same == 2:
                 score = 2
-                description = "Pair (%s)" % pair_rank
+                description = "Pair for 2"
             elif same == 3:
                 score = 6
-                description = "Pair Royal (%s)" % pair_rank
+                description = "Three of a kind for 6"
             elif same == 4:
                 score = 12
-                description = "Double Pair Royal (%s)" % pair_rank
+                description = "Four of a kind for 12"
         return score, description
 
 
@@ -99,7 +99,10 @@ class ExactlyEqualsN(ScoreCondition):
             score = 1 if self.n == 31 else 2
         else:
             score = 0
-        description = "%d count" % self.n if score else ""
+        if score:
+            description = "%d for %d" % (self.n, score)
+        else:
+            description = ""
         return score, description
 
 
@@ -153,8 +156,9 @@ class HasStraight_DuringPlay(ScoreCondition):
         card_set = cards[:]
         while card_set:
             if cls._is_straight(card_set):
-                description = "%d-card straight" % len(card_set)
-                return len(card_set), description
+                run_length = len(card_set)
+                description = "Run of %d for %d" % (run_length, run_length)
+                return run_length, description
             card_set.pop(0)
         return 0, description
 
@@ -173,8 +177,14 @@ class CountCombinationsEqualToN(ScoreCondition):
             cmb_list += list(combinations(card_values, i + 1))
         for i in cmb_list:
             n_counts += 1 if sum(i) == self.n else 0
-        description = "%d unique %d-counts" % (n_counts, self.n) if n_counts else ""
         score = n_counts * 2
+        if n_counts > 0:
+            if n_counts == 1:
+                description = "15 for 2"
+            else:
+                description = "%d fifteens for %d" % (n_counts, score)
+        else:
+            description = ""
         return score, description
 
 

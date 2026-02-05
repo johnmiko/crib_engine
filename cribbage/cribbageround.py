@@ -96,6 +96,7 @@ class CribbageRound:
         :return: PlayerState object
         """
         opponent = [p for p in self.game.players if p.name != player.name][0]
+        opponent_score = self.game.board.get_score(opponent)
         
         # Build known_cards: hand + table + starter (if cut)
         known_cards = self.hands[player.name][:] + self.table[:]
@@ -110,7 +111,8 @@ class CribbageRound:
             score=self.game.board.get_score(player),
             is_dealer=(player == self.dealer),
             known_cards=known_cards,
-            opponent_known_hand=opponent_known_hand
+            opponent_known_hand=opponent_known_hand,
+            opponent_score=opponent_score,
         )
     
     def _build_round_state(self, sequence_start_idx=0) -> RoundState:

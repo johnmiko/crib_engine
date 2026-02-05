@@ -58,6 +58,18 @@ def wilson_ci(wins: int, n: int, z: float = 1.96) -> tuple[float, float]:
     half = (z / denom) * np.sqrt((phat * (1 - phat) / n) + (z * z / (4 * n * n)))
     return float(center - half), float(center + half)
 
+def mean_ci(values: list[float], z: float = 1.96) -> tuple[float, float]:
+    if not values:
+        return (0.0, 0.0)
+    arr = np.array(values, dtype=np.float32)
+    n = int(arr.shape[0])
+    if n <= 1:
+        mean = float(arr.mean())
+        return (mean, mean)
+    mean = float(arr.mean())
+    std = float(arr.std(ddof=1))
+    half = z * (std / np.sqrt(n))
+    return (mean - half, mean + half)
     
 
 def play_multiple_games_old(num_games, p0, p1, seed=None) -> dict:
@@ -87,14 +99,15 @@ def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
     ties = 0
     diffs = []
     for i in range(num_games):
-        # if (i % 100) == 0:
-        logger.info(f"Playing game {i}/{num_games}")
+        if (i % (num_games / 10)) == 0:
+            logger.info(f"Playing game {i}/{num_games}")
+        game_seed = None if seed is None else int(seed) + i
         # Alternate seats because cribbage has dealer advantage
         if i % 2 == 0:
-            s0, s1 = play_game(p0, p1, seed=seed)
+            s0, s1 = play_game(p0, p1, seed=game_seed)
             diff = s0 - s1
         else:
-            s0, s1 = play_game(p1, p0, seed=seed)
+            s0, s1 = play_game(p1, p0, seed=game_seed)
             diff = s1 - s0
         if diff > 0:
             wins += 1
@@ -102,6 +115,16 @@ def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
              ties += 1
         diffs.append(diff)
     winrate = wins / (num_games - ties)
-    lo, hi = wilson_ci(wins, (num_games - ties))    
-    return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi, "ties": ties}
+    win_lo, win_hi = wilson_ci(wins, (num_games - ties))
+    diff_lo, diff_hi = mean_ci(diffs)
+    return {
+        "wins": wins,
+        "diffs": diffs,
+        "winrate": winrate,
+        "ci_lo": win_lo,
+        "ci_hi": win_hi,
+        "diff_ci_lo": diff_lo,
+        "diff_ci_hi": diff_hi,
+        "ties": ties,
+    }
 

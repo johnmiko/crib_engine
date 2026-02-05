@@ -19,13 +19,15 @@ class PlayerState:
         score: int,
         is_dealer: bool,
         known_cards: Optional[List[Card]] = None,
-        opponent_known_hand: Optional[List[Card]] = None
+        opponent_known_hand: Optional[List[Card]] = None,
+        opponent_score: Optional[int] = None,
     ):
         self.hand = hand
         self.score = score
         self.is_dealer = is_dealer
         self.known_cards = known_cards if known_cards is not None else []
         self.opponent_known_hand = opponent_known_hand if opponent_known_hand is not None else []
+        self.opponent_score = opponent_score if opponent_score is not None else 0
 
 
 class RoundState:

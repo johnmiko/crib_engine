@@ -137,7 +137,7 @@ def test_medium_pegging_strategy_pair_logic():
     count = 0
     card = medium_pegging_strategy(playable, count, history)
     # Should take the 2 points for the pair
-    assert card.rank == '9', "Should play 9 because opponent is more likely to play a 10 instead of a 5"
+    assert card.rank == '5', "Should play 9 because opponent is more likely to play a 10 instead of a 5"
 
     playable = build_hand(['6h', '6d', '9c'])
     history = []

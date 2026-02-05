@@ -27,6 +27,7 @@ def calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nob
         runs_15s_pairs_score = hand_score_cache.get(dummy_tuple, None)  # Fallback if missing
         if runs_15s_pairs_score is None:
             runs_15s_pairs_score = score_hand(dummy_hand, is_crib=False)
+            hand_score_cache[dummy_tuple] = runs_15s_pairs_score
 
         # Extras dummy triggered
         dummy_flush_bonus = 1 if flush_suit == dummy_suit else 0
@@ -53,12 +54,19 @@ def process_dealt_hand_only_exact(args):
     hand_score_cache = {}
     dealt_hand = list(dealt_hand)
     results = []
-    discard_combos = itertools.combinations(range(6), 2)
+    discard_combos = list(itertools.combinations(range(6), 2))
+    starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
+
+    # Group starters by rank -> set of available suits (static per dealt hand)
+    from collections import defaultdict
+    rank_to_suits = defaultdict(set)
+    for starter in starter_pool:
+        rank_to_suits[starter.rank].add(starter.suit)
+
     for discard_idx in discard_combos:
         kept_hand = [dealt_hand[i] for i in range(6) if i not in discard_idx]
         discarded_cards = [dealt_hand[i] for i in discard_idx]
         hand_key = normalize_hand_to_str(kept_hand)
-        starter_pool = [c for c in full_deck if c not in dealt_hand]  # 46 cards
 
         # Flush setup
         suits = [c.suit for c in kept_hand]
@@ -68,15 +76,6 @@ def process_dealt_hand_only_exact(args):
 
         # Nobs setup
         nobs_suits = set(c.suit for c in kept_hand if c.rank.lower() == 'j')
-
-        # Group starters by rank -> set of available suits
-        from collections import defaultdict
-        # ranks to suits is a dict of rank -> set of suits available of the remaining 46 cards
-        rank_to_suits = defaultdict(set)
-        for starter in starter_pool:
-            rank = starter.rank
-            suit = starter.suit
-            rank_to_suits[rank].add(suit)
 
         scores = calc_hand_ranges_exact(rank_to_suits, kept_hand, flush_suit, flush_base, nobs_suits, hand_score_cache)
 
@@ -109,18 +108,38 @@ def exact_hand_and_fast_crib(hand, dealer_is_self):
     best_discards_cards = build_hand(best_discards)
     return tuple(best_discards_cards)
 
+_EXACT_MIN_CRIB_CACHE: dict[tuple[str, bool], tuple[Card, Card]] = {}
+
+
+def _normalize_dealt_hand_key(hand) -> str:
+    # normalize_hand_to_str is order-insensitive for a list of cards
+    return normalize_hand_to_str(hand)
+
+
 def exact_hand_and_min_crib(hand, dealer_is_self, your_score=None, opponent_score=None):
     # don't analyze crib, just calculate min value of the crib and use that
+    cache_key = (_normalize_dealt_hand_key(hand), bool(dealer_is_self))
+    cached = _EXACT_MIN_CRIB_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
     full_deck = get_full_deck()
     hand_score_cache = {}
-    crib_score_cache = {}        
+    crib_score_cache = {}
     hand_results = process_dealt_hand_only_exact([hand, full_deck, hand_score_cache])
-    df_hand = pd.DataFrame(hand_results, columns=["hand_key","min_hand_score","max_hand_score","avg_hand_score"])
+    hand_lookup = {hk: (min_s, avg_s) for hk, min_s, _max_s, avg_s in hand_results}
+
     crib_results = calc_crib_min_only_given_6_cards(hand)
-    df_crib = pd.DataFrame(crib_results, columns=["hand_key","crib_key","min_crib_score","avg_crib_score"])
-    df3 = pd.merge(df_hand, df_crib, on=["hand_key"])        
-    df3["avg_total_score"] = df3["avg_hand_score"] + (df3["avg_crib_score"] if dealer_is_self else -df3["avg_crib_score"])
-    df3["min_total_score"] = df3["min_hand_score"] + (df3["min_crib_score"] if dealer_is_self else -df3["min_crib_score"])
+    best_discards_str = None
+    best_total = float("-inf")
+    for hand_key, crib_key, min_crib, avg_crib in crib_results:
+        hand_min, hand_avg = hand_lookup.get(hand_key, (0.0, 0.0))
+        avg_total = hand_avg + (avg_crib if dealer_is_self else -avg_crib)
+        # min_total unused for now but kept for possible future logic
+        _min_total = hand_min + (min_crib if dealer_is_self else -min_crib)
+        if avg_total > best_total:
+            best_total = avg_total
+            best_discards_str = crib_key
     
     logger = logging.getLogger(__name__)
 #     logger.info(f"\n {df3[['hand_key', 'max_hand_score',
@@ -136,8 +155,10 @@ def exact_hand_and_min_crib(hand, dealer_is_self, your_score=None, opponent_scor
         #     #     logger.info(f"\n {df3[['hand_key', 'crib_key','min_total_score', 'avg_total_score']]}")                
         #     best_discards_str = df4.iloc[0]["crib_key"]            
         # else:
-    best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
-    # best_discards_str = df3.loc[df3["avg_total_score"] == df3["avg_total_score"].max()]["crib_key"].values[0]
+    if best_discards_str is None:
+        # fallback to first discard option if something went wrong
+        best_discards_str = crib_results[0][1]
     best_discards = best_discards_str.lower().replace("t", "10").split("|")
-    best_discards_cards = build_hand(best_discards)
-    return tuple(best_discards_cards)
+    best_discards_cards = tuple(build_hand(best_discards))
+    _EXACT_MIN_CRIB_CACHE[cache_key] = best_discards_cards
+    return best_discards_cards

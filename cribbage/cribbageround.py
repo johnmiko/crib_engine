@@ -68,12 +68,13 @@ class CribbageRound:
     """Individual round of cribbage."""
 
     # def __init__(self, game, dealer, seed: int | None = None):
-    def __init__(self, game, dealer, seed: int | None = None):
+    def __init__(self, game, dealer, seed: int | None = None, fast_mode: bool = False):
         # Replenish deck for each round
         self._rng_round = random.Random(seed)
         self.deck = Deck(seed=seed)
         self.game_winner = None
         self.game = game
+        self.fast_mode = bool(fast_mode)
         self.hands = {self.game.players[0].name: [], self.game.players[1].name: []}
         self.player_hand_after_discard = {self.game.players[0].name: [], self.game.players[1].name: []}
         self.crib = []
@@ -82,8 +83,8 @@ class CribbageRound:
         self.dealer = dealer
         self.nondealer = [p for p in self.game.players if p.name != dealer.name][0]
         self.most_recent_player = None        
-        self.play_record = []
-        self.history = RoundHistory()
+        self.play_record = [] if not self.fast_mode else None
+        self.history = RoundHistory() if not self.fast_mode else None
 
     def __str__(self) -> str:
         return str(self.history)
@@ -140,17 +141,18 @@ class CribbageRound:
         :param sequence_start_idx: Start index of current sequence for table tracking
         :return: Winner if game is won, None otherwise
         """
-        self.play_record.append(
-            PlayRecord(
-                description=f"{player.name}: {description}",
-                full_table=self.table[:],
-                active_table=self.table[sequence_start_idx:],
-                table_count=self.get_table_value(sequence_start_idx),
-                player_name=player.name,
-                card=card,
-                hand=self.hands.get(player.name, [])[:] if self.hands.get(player.name) else None
+        if not self.fast_mode:
+            self.play_record.append(
+                PlayRecord(
+                    description=f"{player.name}: {description}",
+                    full_table=self.table[:],
+                    active_table=self.table[sequence_start_idx:],
+                    table_count=self.get_table_value(sequence_start_idx),
+                    player_name=player.name,
+                    card=card,
+                    hand=self.hands.get(player.name, [])[:] if self.hands.get(player.name) else None
+                )
             )
-        )
         return self.game.board.peg(player, points)
 
     def _record_non_scoring_event(self, player, description: str, card=None, sequence_start_idx=0):
@@ -161,17 +163,18 @@ class CribbageRound:
         :param card: The card played (if applicable)
         :param sequence_start_idx: Start index of current sequence for table tracking
         """
-        self.play_record.append(
-            PlayRecord(
-                description=f"{player.name}: {description}",
-                full_table=self.table[:],
-                active_table=self.table[sequence_start_idx:],
-                table_count=self.get_table_value(sequence_start_idx),
-                player_name=player.name,
-                card=card,
-                hand=self.hands.get(player.name, [])[:] if self.hands.get(player.name) else None
+        if not self.fast_mode:
+            self.play_record.append(
+                PlayRecord(
+                    description=f"{player.name}: {description}",
+                    full_table=self.table[:],
+                    active_table=self.table[sequence_start_idx:],
+                    table_count=self.get_table_value(sequence_start_idx),
+                    player_name=player.name,
+                    card=card,
+                    hand=self.hands.get(player.name, [])[:] if self.hands.get(player.name) else None
+                )
             )
-        )
 
     def _deal(self):
         """Deal cards.
@@ -255,8 +258,9 @@ class CribbageRound:
         self._cut()
         self._deal()
         logger.debug(self.hands)
-        self.history.dealer = self.dealer.name
-        self.history.cards_dealt = {p.name: [str(card) for card in self.hands[p.name]] for p in self.game.players}
+        if self.history is not None:
+            self.history.dealer = self.dealer.name
+            self.history.cards_dealt = {p.name: [str(card) for card in self.hands[p.name]] for p in self.game.players}
 
     def setup_crib_phase(self):
         """Phase 2: Populate crib and draw starter.
@@ -264,8 +268,9 @@ class CribbageRound:
         Separated for composability - can be called independently by API wrapper.
         """
         self._populate_crib()
-        self.history.crib = [str(card) for card in self.crib]
-        self.history.score_at_start_of_round = [self.game.board.get_score(p) for p in self.game.players]
+        if self.history is not None:
+            self.history.crib = [str(card) for card in self.crib]
+            self.history.score_at_start_of_round = [self.game.board.get_score(p) for p in self.game.players]
         self._cut()
         # Only draw starter if not already set (allows mocking for tests)
         if self.starter is None:
@@ -281,7 +286,8 @@ class CribbageRound:
             if self.game_winner is not None:
                 return self.game_winner
             logger.debug("2 points to %s for his heels." % str(self.dealer))
-        self.history.starter = str(self.starter)
+        if self.history is not None:
+            self.history.starter = str(self.starter)
         return None
 
     def set_up_round_and_deal_cards(self):
@@ -368,7 +374,8 @@ class CribbageRound:
                         any_player_has_at_least_1_card = any(len(hand) > 0 for hand in self.hands.values())
                         if not any_player_has_at_least_1_card:                            
                             self.game_winner = self._record_and_peg(player, 1, "Last card for 1", card=None, sequence_start_idx=0)
-                            self.history.score_after_pegging = [self.game.board.get_score(p) for p in self.game.players]
+                            if self.history is not None:
+                                self.history.score_after_pegging = [self.game.board.get_score(p) for p in self.game.players]
                             break
 
         # Score each player's hand
@@ -376,8 +383,9 @@ class CribbageRound:
         # Game ends immediately when someone reaches 121
         self.score_hands_phase()
 
-        self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
-        self.history.play_record = self.play_record
+        if self.history is not None:
+            self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
+            self.history.play_record = self.play_record
 
     def score_nondealer_hand(self):
         """Score non-dealer's hand. Returns winner if this wins the game, None otherwise."""
@@ -386,7 +394,8 @@ class CribbageRound:
             logger.debug(f"Scoring non-dealer {self.nondealer.name} hand: {self.player_hand_after_discard.get(self.nondealer.name, 'NOT FOUND')}")
             p_cards_played = self.player_hand_after_discard[self.nondealer.name] + [self.starter]
             score = self._score_hand(cards=self.player_hand_after_discard[self.nondealer.name] + [self.starter], is_crib=False)
-            self.history.hand_scores[self.nondealer.name] = score
+            if self.history is not None:
+                self.history.hand_scores[self.nondealer.name] = score
             logger.debug(f"Non-dealer {self.nondealer.name} scored {score} points")
             if score:
                 winner = self.game.board.peg(self.nondealer, score)
@@ -403,7 +412,8 @@ class CribbageRound:
             logger.debug(f"Scoring dealer {self.dealer.name} hand: {self.player_hand_after_discard.get(self.dealer.name, 'NOT FOUND')}")
             p_cards_played = self.player_hand_after_discard[self.dealer.name] + [self.starter]
             score = self._score_hand(cards=self.player_hand_after_discard[self.dealer.name] + [self.starter], is_crib=False)
-            self.history.hand_scores[self.dealer.name] = score
+            if self.history is not None:
+                self.history.hand_scores[self.dealer.name] = score
             logger.debug(f"Dealer {self.dealer.name} scored {score} points")
             if score:
                 winner = self.game.board.peg(self.dealer, score)
@@ -415,16 +425,19 @@ class CribbageRound:
 
     def score_crib(self):
         """Score the crib. Returns winner if this wins the game, None otherwise."""
-        # Score the crib (if game not yet won)
-        if self.game_winner is None:
-            logger.debug("Scoring the crib: " + str(self.crib + [self.starter]))
-            score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)
+        # Score the crib only if game not yet won.
+        if self.game_winner is not None:
+            return None
+
+        logger.debug("Scoring the crib: " + str(self.crib + [self.starter]))
+        score = self._score_hand(cards=(self.crib + [self.starter]), is_crib=True)
+        if self.history is not None:
             self.history.crib_score = score  # Include starter card as part of crib
-            if score:
-                winner = self.game.board.peg(self.dealer, score)
-                if winner is not None:
-                    self.game_winner = winner
-                    return winner
+        if score:
+            winner = self.game.board.peg(self.dealer, score)
+            if winner is not None:
+                self.game_winner = winner
+                return winner
         return None
 
     def score_hands_phase(self):
@@ -433,8 +446,9 @@ class CribbageRound:
         self.score_dealer_hand()
         self.score_crib()
 
-        self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
-        self.history.play_record = self.play_record
+        if self.history is not None:
+            self.history.score_after_hands = [self.game.board.get_score(p) for p in self.game.players]
+            self.history.play_record = self.play_record
 
     def go_or_31_reached(self, players_said_go, count):
         # If both players have reached 31 or "go" and not run out of cards, continue play

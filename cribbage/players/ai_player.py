@@ -387,6 +387,9 @@ class MLPValueModel:
 class AIPlayer(BeginnerPlayer):
     def __init__(self, name: str = "ai"):
         super().__init__(name=name)
+        self.description = (
+            "Picks highest model-predicted hand and pegging value using learned value models."
+        )
         model_dir = Path(__file__).resolve().parent / "hard_model"
         meta_path = model_dir / "model_meta.json"
         if not meta_path.exists():

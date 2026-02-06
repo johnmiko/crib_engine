@@ -2,12 +2,17 @@ from collections import defaultdict
 import math
 import sqlite3
 import itertools
+import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 # You said this exists already:
 # from your_module import get_full_deck, score_hand
 # For example:
 import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from cribbage.strategies.crib_strategies import calc_crib_ranges_exact_and_slow
 from cribbage.strategies.hand_strategies import calc_hand_ranges_exact
@@ -696,12 +701,127 @@ def build_crib_stats_approx_table(
     print("Done building crib_stats_approx")
 
 
+def build_hand1_table(
+    full_deck,
+    db_path=DB_PATH,
+    batch_size: int = 5000,
+):
+    table_name = "hand1"
+    conn = sqlite3.connect(db_path)
+    delete_table(table_name, conn)
+    cur = conn.cursor()
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            hand_key TEXT PRIMARY KEY,
+            min_score INTEGER,
+            max_score INTEGER,
+            avg_score REAL,
+            samples INTEGER
+        )
+        """
+    )
+    conn.commit()
+
+    records = []
+    possible_hands = list(itertools.combinations(full_deck, 4))
+    total = len(possible_hands)
+    log_every = max(1, total // 10)
+    for idx, hand in enumerate(possible_hands, 1):
+        remaining = [c for c in full_deck if c not in hand]
+        total_score = 0.0
+        min_score = None
+        max_score = None
+        samples = 0
+        for starter in remaining:
+            score = score_hand(list(hand), is_crib=False, starter_card=starter)
+            total_score += score
+            min_score = score if min_score is None else min(min_score, score)
+            max_score = score if max_score is None else max(max_score, score)
+            samples += 1
+        hand_key = normalize_hand_to_str(hand)
+        records.append(
+            {
+                "hand_key": hand_key,
+                "min_score": int(min_score) if min_score is not None else 0,
+                "max_score": int(max_score) if max_score is not None else 0,
+                "avg_score": round(total_score / float(samples), 4),
+                "samples": int(samples),
+            }
+        )
+        if idx % log_every == 0 or idx == total:
+            pct = int(round((idx / total) * 100))
+            print(f"Processing hand {idx} / {total} ({pct}%)")
+        if len(records) >= batch_size:
+            pd.DataFrame(records).to_sql(table_name, conn, if_exists="append", index=False)
+            records.clear()
+
+    if records:
+        pd.DataFrame(records).to_sql(table_name, conn, if_exists="append", index=False)
+    conn.close()
+    print(f"Done building {table_name}")
+
+
+def build_crib1_table(
+    full_deck,
+    db_path=DB_PATH,
+    batch_size: int = 5000,
+):
+    table_name = "crib1"
+    conn = sqlite3.connect(db_path)
+    delete_table(table_name, conn)
+    cur = conn.cursor()
+    cur.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {table_name} (
+            hand_key TEXT PRIMARY KEY,
+            avg_score REAL,
+            samples INTEGER
+        )
+        """
+    )
+    conn.commit()
+
+    records = []
+    possible_cribs = list(itertools.combinations(full_deck, 2))
+    total = len(possible_cribs)
+    log_every = max(1, total // 10)
+    for idx, crib in enumerate(possible_cribs, 1):
+        remaining = [c for c in full_deck if c not in crib]
+        total_score = 0.0
+        samples = 0
+        for starter in remaining:
+            opp_remaining = [c for c in remaining if c != starter]
+            for opp2 in itertools.combinations(opp_remaining, 2):
+                total_score += score_hand(list(crib) + list(opp2), is_crib=True, starter_card=starter)
+                samples += 1
+        crib_key = normalize_hand_to_str(crib)
+        records.append(
+            {
+                "hand_key": crib_key,
+                "avg_score": round(total_score / float(samples), 4),
+                "samples": int(samples),
+            }
+        )
+        if idx % log_every == 0 or idx == total:
+            pct = int(round((idx / total) * 100))
+            print(f"Processing crib {idx} / {total} ({pct}%)")
+        if len(records) >= batch_size:
+            pd.DataFrame(records).to_sql(table_name, conn, if_exists="append", index=False)
+            records.clear()
+
+    if records:
+        pd.DataFrame(records).to_sql(table_name, conn, if_exists="append", index=False)
+    conn.close()
+    print(f"Done building {table_name}")
+
 
 
 
 if __name__ == "__main__":
     full_deck = get_full_deck()
-    build_hand_stats_approx_table(full_deck, db_path=DB_PATH)
+    build_hand1_table(full_deck, db_path=DB_PATH)
+    build_crib1_table(full_deck, db_path=DB_PATH)
     # build_crib_stats_approx_table(full_deck, db_path=DB_PATH)
 
 

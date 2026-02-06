@@ -42,8 +42,13 @@ logger = getLogger(__name__)
 #         all_combos.append((list(kept), crib))
 #     return all_combos
 
-def play_game(p0, p1, seed=None) -> tuple[int, int]:
-    game = cribbagegame.CribbageGame(players=[p0, p1], seed=seed)
+def play_game(p0, p1, seed=None, *, fast_mode: bool = False, copy_players: bool = True) -> tuple[int, int]:
+    game = cribbagegame.CribbageGame(
+        players=[p0, p1],
+        seed=seed,
+        copy_players=copy_players,
+        fast_mode=fast_mode,
+    )
     final_pegging_scores = game.start()
     return (final_pegging_scores[0], final_pegging_scores[1])
     # return get_scores(game)
@@ -77,7 +82,7 @@ def play_multiple_games_old(num_games, p0, p1, seed=None) -> dict:
     diffs = []
     for i in range(num_games):
         if (i % 100) == 0:
-            logger.info(f"Playing game {i}/{num_games}")
+            logger.debug(f"Playing game {i}/{num_games}")
         # Alternate seats because cribbage has dealer advantage
         if i % 2 == 0:
             s0, s1 = play_game(p0, p1, seed=seed)
@@ -94,20 +99,32 @@ def play_multiple_games_old(num_games, p0, p1, seed=None) -> dict:
     lo, hi = wilson_ci(wins, num_games)    
     return {"wins":wins, "diffs": diffs, "winrate": winrate, "ci_lo": lo, "ci_hi": hi}
 
-def play_multiple_games(num_games, p0, p1, seed=None) -> dict:
+def play_multiple_games(num_games, p0, p1, seed=None, *, fast_mode: bool = False, copy_players: bool = True) -> dict:
     wins = 0
     ties = 0
     diffs = []
     for i in range(num_games):
         if (i % (num_games / 10)) == 0:
-            logger.info(f"Playing game {i}/{num_games}")
+            logger.debug(f"Playing game {i}/{num_games}")
         game_seed = None if seed is None else int(seed) + i
         # Alternate seats because cribbage has dealer advantage
         if i % 2 == 0:
-            s0, s1 = play_game(p0, p1, seed=game_seed)
+            s0, s1 = play_game(
+                p0,
+                p1,
+                seed=game_seed,
+                fast_mode=fast_mode,
+                copy_players=copy_players,
+            )
             diff = s0 - s1
         else:
-            s0, s1 = play_game(p1, p0, seed=game_seed)
+            s0, s1 = play_game(
+                p1,
+                p0,
+                seed=game_seed,
+                fast_mode=fast_mode,
+                copy_players=copy_players,
+            )
             diff = s1 - s0
         if diff > 0:
             wins += 1

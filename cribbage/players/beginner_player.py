@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 class BeginnerPlayer(BasePlayer):
     def __init__(self, name: str = "beginner"):
         self.name = name
+        self.description = (
+            "Picks highest scoring hand and pegs points when possible. Does not use statistics"
+        )
 
     def select_crib_cards(self, player_state, round_state) -> Tuple[Card, Card]:
         return basic_crib_strategy(player_state.hand, player_state.is_dealer)

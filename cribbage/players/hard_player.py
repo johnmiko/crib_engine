@@ -3,8 +3,9 @@ from __future__ import annotations
 import sqlite3
 from itertools import combinations
 from typing import List, Optional, Tuple
+from pathlib import Path
 
-from cribbage.constants import DB_PATH
+from cribbage.constants import HAND_CRIB_DB_PATH
 from cribbage.database import normalize_hand_to_str
 from cribbage.players.beginner_player import BeginnerPlayer
 from cribbage.players.medium_player import MediumPlayer
@@ -20,16 +21,22 @@ def _load_db_stats() -> tuple[dict[str, float], dict[str, float]]:
     if _HAND_STATS is not None and _CRIB_STATS is not None:
         return _HAND_STATS, _CRIB_STATS
 
+    if not HAND_CRIB_DB_PATH or not Path(HAND_CRIB_DB_PATH).exists():
+        raise FileNotFoundError(
+            f"Missing hand/crib stats DB at {HAND_CRIB_DB_PATH}. "
+            "Run scripts/build_hand_crib_db.py to create it."
+        )
+
     hand_stats: dict[str, float] = {}
     crib_stats: dict[str, float] = {}
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(HAND_CRIB_DB_PATH)
     cur = conn.cursor()
-    cur.execute("SELECT hand_key, avg_score FROM hand_stats_approx")
+    cur.execute("SELECT hand_key, avg_score FROM hand1")
     for hand_key, avg_score in cur.fetchall():
         hand_stats[str(hand_key)] = float(avg_score)
 
-    cur.execute("SELECT hand_key, avg_score FROM crib_stats_approx")
+    cur.execute("SELECT hand_key, avg_score FROM crib1")
     for crib_key, avg_score in cur.fetchall():
         crib_stats[str(crib_key)] = float(avg_score)
 
@@ -42,6 +49,10 @@ def _load_db_stats() -> tuple[dict[str, float], dict[str, float]]:
 class HardPlayer(BeginnerPlayer):
     def __init__(self, name: str = "hard"):
         super().__init__(name=name)
+        self.description = (
+            "Picks highest average scoring hand crib combo from average estimates. "
+            "Pegs points, tries to set self up for points and not set opponent up for points (same as medium)"
+        )
         self._fallback = MediumPlayer(name=f"{name}_fallback")
         self._hand_stats, self._crib_stats = _load_db_stats()
 
@@ -65,15 +76,13 @@ class HardPlayer(BeginnerPlayer):
             hand_avg = self._hand_stats.get(hand_key)
             crib_avg = self._crib_stats.get(crib_key)
             if hand_avg is None or crib_avg is None:
-                continue
+                raise KeyError(f"Missing DB stats for hand={hand_key} crib={crib_key}")
 
             score = hand_avg + (crib_avg if dealer_is_self else -crib_avg)
             if score > best_score:
                 best_score = score
                 best_discards = (discards_list[0], discards_list[1])
 
-        if best_discards is not None:
-            return best_discards
-
-        # Fallback if DB is missing entries.
-        return self._fallback.select_crib_cards(player_state, round_state)
+        if best_discards is None:
+            raise RuntimeError("No discard choice found from DB stats.")
+        return best_discards

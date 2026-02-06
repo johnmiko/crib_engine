@@ -32,7 +32,7 @@ class CribbageGame:
     CRIB_SIZE = 4  # size of the crib
     N_GO = 31  # round sequence ends at this card point total
 
-    def __init__(self, players, seed: int | None = None, copy_players: bool = True, dealer=None):
+    def __init__(self, players, seed: int | None = None, copy_players: bool = True, dealer=None, fast_mode: bool = False):
         # self.players = players  #: the two players
         if copy_players:
             self.players = [deepcopy(p) for p in players]
@@ -44,6 +44,7 @@ class CribbageGame:
         self.seed = seed
         self._rng = random.Random(seed)    
         # self._rng = random.Random(self.seed)
+        self.fast_mode = bool(fast_mode)
         assert len(players) == 2, "Currently, only 2-player games are supported."
         for p in self.players:
             if isinstance(p, RandomPlayer):
@@ -89,7 +90,7 @@ class CribbageGame:
         seed = self._rng.randint(0, 2**32 - 1) if self.seed is not None else None
         player_gen = self._alternate_players(starting_player)        
         dealer = next(player_gen)
-        r = CribbageRound(self, dealer=dealer, seed=seed)
+        r = CribbageRound(self, dealer=dealer, seed=seed, fast_mode=self.fast_mode)
         r.play()
         game_score = [self.board.get_score(p) for p in self.players]
         if game_score == [121,121]:

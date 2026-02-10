@@ -1,11 +1,14 @@
 import sys
 from pathlib import Path
+# look in this directory first when importing modules
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+
 import pandas as pd
 from cribbage.state import PlayerState, RoundState
 from typing import List
 
-# look in this directory first when importing modules
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 pd.set_option("display.width", None)
 
 

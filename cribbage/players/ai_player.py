@@ -428,6 +428,7 @@ def featurize_pegging(
     suit_counts = unseen_suit_counts if unseen_suit_counts is not None else np.zeros(4, dtype=np.int32)
     max_suit_count = float(np.max(suit_counts)) if suit_counts is not None else 0.0
     max_suit_prob = max_suit_count / max(1.0, float(unseen_count))
+    distinct_suits = float(np.count_nonzero(suit_counts)) if suit_counts is not None else 0.0
 
     score_context = _score_context_features(player_score, opponent_score)
 
@@ -458,6 +459,13 @@ def featurize_pegging(
             resp_pair_prob,
             resp_run_prob,
             max_suit_prob,
+            float(resp_counts["any"]),
+            float(resp_counts["r15"]),
+            float(resp_counts["r31"]),
+            float(resp_counts["pair"]),
+            float(resp_counts["run"]),
+            max_suit_count,
+            distinct_suits,
         ],
         dtype=np.float32,
     )

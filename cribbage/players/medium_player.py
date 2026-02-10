@@ -131,6 +131,7 @@ class MediumPlayer(BeginnerPlayer):
         self.description = (
             "Picks highest average scoring hand simulating every starter card and min crib points. "
             "Pegs points, tries to set self up for points and not set opponent up for points"
+            "Beats beginner 55% of the time"
         )
 
     def play_pegging(self, playable: List[Card], count: int, history_since_reset: List[Card]) -> Optional[Card]:

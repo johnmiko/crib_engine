@@ -1,0 +1,26 @@
+{
+  "trained_at_utc": "2026-02-09T23:10:57.115436+00:00",
+  "model_version": "v9",
+  "run_id": "005",
+  "source_best": "models\\regression\\v9\\pegging\\004_small\\rl\\004\\ppo\\004",
+  "model_type": "mlp",
+  "training_mode": "pegging_only",
+  "discard_feature_set": "full",
+  "pegging_feature_set": "full_seq",
+  "discard_feature_dim": 0,
+  "pegging_feature_dim": 1054,
+  "mlp_hidden": [
+    128,
+    64
+  ],
+  "lr": 0.0001,
+  "ppo_epochs": 2,
+  "batch_size": 64,
+  "clip": 0.2,
+  "entropy_coef": 0.01,
+  "games_per_iteration": 100,
+  "eval_games": 200,
+  "eval_avg_diff": -2.985,
+  "eval_winrate": 0.44,
+  "pegging_model_file": "pegging_policy.pt"
+}

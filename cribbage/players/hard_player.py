@@ -52,6 +52,7 @@ class HardPlayer(BeginnerPlayer):
         self.description = (
             "Picks highest average scoring hand crib combo from average estimates. "
             "Pegs points, tries to set self up for points and not set opponent up for points (same as medium)"
+            "Beats beginner 57% of the time"
         )
         self._fallback = MediumPlayer(name=f"{name}_fallback")
         self._hand_stats, self._crib_stats = _load_db_stats()

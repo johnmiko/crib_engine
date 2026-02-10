@@ -816,6 +816,73 @@ def build_crib1_table(
     print(f"Done building {table_name}")
 
 
+def _hand_key_to_cards(hand_key: str) -> list[Card]:
+    parts = [p for p in hand_key.split("|") if p]
+    cards: list[Card] = []
+    for code in parts:
+        code = code.strip()
+        if len(code) == 2:
+            rank = code[0]
+            suit = code[1]
+            rank = "10" if rank.upper() == "T" else rank.lower()
+            cards.append(Card(f"{rank}{suit.lower()}"))
+        elif len(code) == 3:
+            rank = code[:2]
+            suit = code[2]
+            cards.append(Card(f"{rank.lower()}{suit.lower()}"))
+        else:
+            raise ValueError(f"Unexpected card code: {code!r}")
+    return cards
+
+
+def update_crib1_table(
+    db_path=DB_PATH,
+    batch_size: int = 5000,
+):
+    table_name = "crib1"
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute(f"PRAGMA table_info({table_name})")
+    columns = {row[1] for row in cur.fetchall()}
+    if "min_score" not in columns:
+        cur.execute(f"ALTER TABLE {table_name} ADD COLUMN min_score INTEGER")
+        conn.commit()
+
+    cur.execute(f"SELECT hand_key FROM {table_name}")
+    rows = cur.fetchall()
+    total = len(rows)
+    log_every = max(1, total // 10)
+    updates: list[tuple[int, str]] = []
+    for idx, (hand_key,) in enumerate(rows, 1):
+        crib_cards = _hand_key_to_cards(str(hand_key))
+        min_score = 0
+        if len(crib_cards) == 2:
+            if crib_cards[0].rank.lower() == crib_cards[1].rank.lower():
+                min_score = 2
+            elif (crib_cards[0].value + crib_cards[1].value) == 15:
+                min_score = 2
+        updates.append((min_score, str(hand_key)))
+        if len(updates) >= batch_size:
+            cur.executemany(
+                f"UPDATE {table_name} SET min_score = ? WHERE hand_key = ?",
+                updates,
+            )
+            conn.commit()
+            updates.clear()
+        if idx % log_every == 0 or idx == total:
+            pct = int(round((idx / total) * 100))
+            print(f"Updating {table_name} min_score {idx} / {total} ({pct}%)")
+
+    if updates:
+        cur.executemany(
+            f"UPDATE {table_name} SET min_score = ? WHERE hand_key = ?",
+            updates,
+        )
+        conn.commit()
+    conn.close()
+    print(f"Done updating {table_name} min_score")
+
+
 
 
 if __name__ == "__main__":

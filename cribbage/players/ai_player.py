@@ -16,6 +16,9 @@ from cribbage.cribbagegame import score_play
 RANKS = ["a", "2", "3", "4", "5", "6", "7", "8", "9", "10", "j", "q", "k"]
 RANK_TO_I = {r: i for i, r in enumerate(RANKS)}
 TENS_RANKS = {"10", "j", "q", "k"}
+_SUITS = ["h", "d", "c", "s"]
+SUIT_TO_I = {s: i for i, s in enumerate(_SUITS)}
+_FULL_DECK = get_full_deck()
 
 # Base discard features (52 discards + 52 kept + 1 dealer flag)
 BASE_DISCARD_FEATURE_DIM = 105
@@ -34,10 +37,14 @@ DISCARD_FEATURE_DIM = BASE_DISCARD_FEATURE_DIM + ENGINEERED_DISCARD_FEATURE_DIM
 
 # Pegging features
 PEGGING_BASE_FEATURE_DIM = 240  # hand(52) + table(52) + count(32) + candidate(52) + known(52)
-PEGGING_ENGINEERED_NO_SCORE_DIM = 20
-PEGGING_ENGINEERED_SCORE_DIM = 5
+PEGGING_ENGINEERED_NO_SCORE_DIM = 32
+PEGGING_ENGINEERED_SCORE_DIM = 6
 PEGGING_ENGINEERED_FEATURE_DIM = PEGGING_ENGINEERED_NO_SCORE_DIM + PEGGING_ENGINEERED_SCORE_DIM
 PEGGING_FULL_FEATURE_DIM = PEGGING_BASE_FEATURE_DIM + 52 + 52 + PEGGING_ENGINEERED_FEATURE_DIM  # + opp_played + all_played
+PEGGING_SEQ_LEN = 8
+PEGGING_SEQ_STEP_DIM = 84  # card(52) + count(32)
+PEGGING_SEQ_FEATURE_DIM = PEGGING_SEQ_LEN * PEGGING_SEQ_STEP_DIM
+PEGGING_FULL_SEQ_FEATURE_DIM = PEGGING_FULL_FEATURE_DIM + PEGGING_SEQ_FEATURE_DIM
 
 
 def get_discard_feature_indices(feature_set: str) -> np.ndarray:
@@ -57,6 +64,8 @@ def get_pegging_feature_indices(feature_set: str) -> np.ndarray:
     if feature_set == "full_no_scores":
         end = PEGGING_BASE_FEATURE_DIM + 52 + 52 + PEGGING_ENGINEERED_NO_SCORE_DIM
         return np.arange(end, dtype=np.int64)
+    if feature_set == "full_seq":
+        return np.arange(PEGGING_FULL_SEQ_FEATURE_DIM, dtype=np.int64)
     if feature_set == "full":
         return np.arange(PEGGING_FULL_FEATURE_DIM, dtype=np.int64)
     raise ValueError(f"Unknown pegging feature_set: {feature_set}")
@@ -206,8 +215,7 @@ def featurize_discard(
 
 def one_hot_count(count: int) -> np.ndarray:
     v = np.zeros(32, dtype=np.float32)
-    if 0 <= count < 32:
-        v[count] = 1.0
+    v[count] = 1.0
     return v
 
 
@@ -222,6 +230,8 @@ def featurize_pegging(
     player_score: int | None = None,
     opponent_score: int | None = None,
     feature_set: str = "full_no_scores",
+    unseen_value_counts: np.ndarray | None = None,
+    unseen_count: int | None = None,
 ) -> np.ndarray:
     if known_cards is None:
         known_cards = []
@@ -234,16 +244,32 @@ def featurize_pegging(
     if opponent_score is None:
         opponent_score = 0
 
-    hand_vec = multi_hot_cards(hand)
-    table_vec = multi_hot_cards(table)
-    count_vec = one_hot_count(count)
-    known_vec = multi_hot_cards(known_cards)
-    opp_played_vec = multi_hot_cards(opponent_known_hand)
-    all_played_vec = multi_hot_cards(all_played_cards)
+    def _pegging_sequence_features(table_cards: List[Card]) -> np.ndarray:
+        seq_cards = table_cards[-PEGGING_SEQ_LEN:]
+        steps: List[np.ndarray] = []
+        count_so_far = 0
+        for c in seq_cards:
+            card_vec = np.zeros(52, dtype=np.float32)
+            card_vec[c.to_index()] = 1.0
+            count_vec = one_hot_count(count_so_far)
+            steps.append(np.concatenate([card_vec, count_vec]))
+            count_so_far += c.get_value()
+        if len(steps) < PEGGING_SEQ_LEN:
+            pad = PEGGING_SEQ_LEN - len(steps)
+            steps.extend([np.zeros(PEGGING_SEQ_STEP_DIM, dtype=np.float32) for _ in range(pad)])
+        return np.concatenate(steps).astype(np.float32, copy=False)
+
+    hand_vec = multi_hot_cards(hand)           # (52,)
+    table_vec = multi_hot_cards(table)         # (52,)
+    count_vec = one_hot_count(count)           # (32,)
+    known_vec = multi_hot_cards(known_cards)  # (52,)
+    opp_played_vec = multi_hot_cards(opponent_known_hand)  # (52,)
+    all_played_vec = multi_hot_cards(all_played_cards)     # (52,)
 
     cand_vec = np.zeros(52, dtype=np.float32)
     cand_vec[candidate.to_index()] = 1.0
 
+    # Engineered pegging features (scalars)
     new_count = count + candidate.get_value()
     remaining_to_31 = 31 - new_count
     makes_15 = 1.0 if new_count == 15 else 0.0
@@ -254,6 +280,7 @@ def featurize_pegging(
     pair_points = float(HasPairTripleQuad().check(seq_after)[0])
     run_length = float(HasStraight_DuringPlay().check(seq_after)[0])
 
+    # Run setup features based on last two cards after our play
     run_setup_gap1 = 0.0
     run_setup_gap2 = 0.0
     run_setup_any = 0.0
@@ -261,6 +288,7 @@ def featurize_pegging(
 
     if len(seq_after) >= 1:
         last_rank = seq_after[-1].get_rank().lower()
+        # Opponent can score a pair if they play same rank and stay <=31
         same_rank_card = Card(f"{last_rank}h")
         if new_count + same_rank_card.get_value() <= 31:
             opponent_pair_setup = 1.0
@@ -270,6 +298,7 @@ def featurize_pegging(
         r2 = RANK_TO_I[seq_after[-2].get_rank().lower()] + 1
         gap = abs(r1 - r2)
         if gap == 1:
+            # Opponent can play r1-1 or r2+1
             candidates = []
             low = min(r1, r2) - 1
             high = max(r1, r2) + 1
@@ -283,12 +312,14 @@ def featurize_pegging(
                 if new_count + c.get_value() <= 31:
                     run_setup_gap1 += 1.0
         elif gap == 2:
+            # Opponent can play the middle rank
             mid = min(r1, r2) + 1
             rank_str = RANKS[mid - 1]
             c = Card(f"{rank_str}h")
             if new_count + c.get_value() <= 31:
                 run_setup_gap2 = 1.0
 
+    # Count how many ranks could create a run of 3+ for opponent next
     for rv in range(1, 14):
         rank_str = RANKS[rv - 1]
         c = Card(f"{rank_str}h")
@@ -304,13 +335,99 @@ def featurize_pegging(
     opp_played_count = float(len(opponent_known_hand))
     known_cards_count = float(len(known_cards))
 
-    full_deck = get_full_deck()
-    known_set = set(known_cards) | set(all_played_cards) | set(hand)
-    unseen = [c for c in full_deck if c not in known_set]
-    playable_unseen = [c for c in unseen if c.get_value() <= remaining_to_31]
-    opp_can_play_prob = float(len(playable_unseen) / max(1, len(unseen)))
-    opp_playable_count = float(len(playable_unseen))
-    unseen_count = float(len(unseen))
+    # Opponent "go" danger: estimate if opponent has any playable card.
+    unseen_suit_counts = None
+    if unseen_value_counts is None or unseen_count is None:
+        known_set = set(known_cards) | set(all_played_cards) | set(hand)
+        unseen = [c for c in _FULL_DECK if c not in known_set]
+        unseen_count = len(unseen)
+        unseen_value_counts = np.zeros(11, dtype=np.int32)
+        for c in unseen:
+            unseen_value_counts[c.get_value()] += 1
+        unseen_rank_counts = np.zeros(13, dtype=np.int32)
+        unseen_suit_counts = np.zeros(4, dtype=np.int32)
+        for c in unseen:
+            unseen_rank_counts[RANK_TO_I[c.get_rank().lower()]] += 1
+            unseen_suit_counts[SUIT_TO_I[c.get_suit()]] += 1
+    else:
+        unseen_rank_counts = None
+
+    max_val = 10 if remaining_to_31 >= 10 else remaining_to_31
+    if max_val < 1:
+        playable_unseen_count = 0
+    else:
+        playable_unseen_count = int(unseen_value_counts[1 : max_val + 1].sum())
+    opp_can_play_prob = float(playable_unseen_count / max(1, unseen_count))
+    opp_playable_count = float(playable_unseen_count)
+    unseen_count = float(unseen_count)
+
+    if unseen_rank_counts is None or unseen_suit_counts is None:
+        known_set = set(known_cards) | set(all_played_cards) | set(hand)
+        unseen = [c for c in _FULL_DECK if c not in known_set]
+        unseen_rank_counts = np.zeros(13, dtype=np.int32)
+        unseen_suit_counts = np.zeros(4, dtype=np.int32)
+        for c in unseen:
+            unseen_rank_counts[RANK_TO_I[c.get_rank().lower()]] += 1
+            unseen_suit_counts[SUIT_TO_I[c.get_suit()]] += 1
+
+    def _response_counts(table_state: List[Card], count_state: int) -> dict[str, float]:
+        resp_any = 0.0
+        resp_15 = 0.0
+        resp_31 = 0.0
+        resp_pair = 0.0
+        resp_run = 0.0
+        for rv in range(1, 14):
+            count_cards = float(unseen_rank_counts[rv - 1])
+            if count_cards <= 0.0:
+                continue
+            rank_str = RANKS[rv - 1]
+            c = Card(f"{rank_str}h")
+            new_count = count_state + c.get_value()
+            if new_count > 31:
+                continue
+            seq = table_state + [c]
+            immediate_points = float(score_play(seq)[0])
+            pair_points = float(HasPairTripleQuad().check(seq)[0])
+            run_len = float(HasStraight_DuringPlay().check(seq)[0])
+            if immediate_points > 0.0:
+                resp_any += count_cards
+            if new_count == 15:
+                resp_15 += count_cards
+            if new_count == 31:
+                resp_31 += count_cards
+            if pair_points > 0.0:
+                resp_pair += count_cards
+            if run_len >= 3.0:
+                resp_run += count_cards
+        return {
+            "any": resp_any,
+            "r15": resp_15,
+            "r31": resp_31,
+            "pair": resp_pair,
+            "run": resp_run,
+        }
+
+    seq_after = table + [candidate]
+    new_count = count + candidate.get_value()
+    resp_counts = _response_counts(seq_after, new_count)
+
+    if sum(unseen_rank_counts) > 0:
+        resp_any_prob = resp_counts["any"] / sum(unseen_rank_counts)
+        resp_15_prob = resp_counts["r15"] / sum(unseen_rank_counts)
+        resp_31_prob = resp_counts["r31"] / sum(unseen_rank_counts)
+        resp_pair_prob = resp_counts["pair"] / sum(unseen_rank_counts)
+        resp_run_prob = resp_counts["run"] / sum(unseen_rank_counts)
+    else:
+        resp_any_prob = 0.0
+        resp_15_prob = 0.0
+        resp_31_prob = 0.0
+        resp_pair_prob = 0.0
+        resp_run_prob = 0.0
+
+    # suit diversity for opponents in unseen cards
+    suit_counts = unseen_suit_counts if unseen_suit_counts is not None else np.zeros(4, dtype=np.int32)
+    max_suit_count = float(np.max(suit_counts)) if suit_counts is not None else 0.0
+    max_suit_prob = max_suit_count / max(1.0, float(unseen_count))
 
     score_context = _score_context_features(player_score, opponent_score)
 
@@ -335,6 +452,12 @@ def featurize_pegging(
             opp_can_play_prob,
             opp_playable_count,
             unseen_count,
+            resp_any_prob,
+            resp_15_prob,
+            resp_31_prob,
+            resp_pair_prob,
+            resp_run_prob,
+            max_suit_prob,
         ],
         dtype=np.float32,
     )
@@ -353,6 +476,11 @@ def featurize_pegging(
     if feature_set == "full":
         out = np.concatenate([base, opp_played_vec, all_played_vec, engineered])
         assert out.shape[0] == PEGGING_FULL_FEATURE_DIM, f"pegging features dim {out.shape[0]} != {PEGGING_FULL_FEATURE_DIM}"
+        return out
+    if feature_set == "full_seq":
+        seq_features = _pegging_sequence_features(table)
+        out = np.concatenate([base, opp_played_vec, all_played_vec, engineered, seq_features])
+        assert out.shape[0] == PEGGING_FULL_SEQ_FEATURE_DIM, f"pegging features dim {out.shape[0]} != {PEGGING_FULL_SEQ_FEATURE_DIM}"
         return out
     raise ValueError(f"Unknown pegging feature_set: {feature_set}")
 

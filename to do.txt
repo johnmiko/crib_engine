@@ -4,6 +4,13 @@ In crib_ai_trainer2 generate_il_data
 
 
 
+I think I want to go straight to full. Before we do that lets do some refactoring. Rename the folder
+    il_datasets to just datasets and change the references to it to match. For the datasets, we are currently saving to like
+    discard_v5/001. Lets remove the 001 and just save directly to discard_v5
+    There's a couple jsonl files being saved to the root directory, please have these being saved to the text directory
+    Same with the selfplay_results.txt and shard_size_benchmark.txt
+
+
 Want to add a description to the players so we know what they are doing
     display what their strategies are
 

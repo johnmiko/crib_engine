@@ -1,6 +1,6 @@
 [project]
 name = "cribbage-engine"
-version = "1.1.13"
+version = "1.1.14"
 description = "Shared cribbage game logic"
 requires-python = ">=3.9"
 dependencies = [
@@ -15,10 +15,11 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 package-dir = {"" = "."}
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["cribbage*"]
 
-[tool.setuptools.data-files]
-data = ["data/hand_crib_stats.sqlite"]
+[tool.setuptools.package-data]
+cribbage = ["data/hand_crib_stats.sqlite"]

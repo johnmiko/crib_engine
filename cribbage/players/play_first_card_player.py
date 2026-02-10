@@ -8,7 +8,9 @@ logger = getLogger(__name__)
 
 class PlayFirstCardPlayer(BasePlayer):
     def __init__(self, name: str = "play first card", seed: int | None = None):
+        super().__init__(name=name)
         self.name = name
+        self.description = "Discards first 2 cards in hand. Plays first card in hand"
 
     def select_crib_cards(self, player_state, round_state) -> Tuple[Card, Card]:
         return tuple(player_state.hand[:2])  # type: ignore

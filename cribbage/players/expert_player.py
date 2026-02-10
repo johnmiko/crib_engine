@@ -48,7 +48,9 @@ class ExpertPlayer(AIPlayer, HardPlayer):
 
     def __init__(self, name: str = "expert", model_dir: Path | None = None):
         HardPlayer.__init__(self, name=name)
-        self.description = "Hard discard + PPO pegging policy. Beats beginner 68% of the time"
+        self.description = ("Discard - Picks highest average scoring hand +/- crib using statistics. (same as hard) "
+        "Pegging - PPO pegging policy. "
+        "Beats beginner 68% of the time.")
 
         if model_dir is None:
             model_dir = Path(__file__).resolve().parent / "expert_player"

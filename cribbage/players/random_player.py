@@ -8,9 +8,11 @@ logger = getLogger(__name__)
 
 class RandomPlayer(BasePlayer):
     def __init__(self, name: str = "random", seed: int | None = None):
+        super().__init__(name=name)
         self.name = name
         self.seed = seed
         self._rng = random.Random(seed)
+        self.description = "Plays randomly"
     
     def reset_rng(self):
         self._rng = random.Random(self.seed)

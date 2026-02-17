@@ -75,10 +75,10 @@ class HasPairs_InHand(ScoreCondition):
                 descriptions.append(f"Pair ({rank_name})")
             elif count == 3:
                 score += 6  # 3 pairs from 3 cards
-                descriptions.append(f"Pair Royal ({rank_name})")
+                descriptions.append(f"3 of a kind ({rank_name})")
             elif count == 4:
                 score += 12  # 6 pairs from 4 cards
-                descriptions.append(f"Double Pair Royal ({rank_name})")
+                descriptions.append(f"4 of a kind ({rank_name})")
         
         description = ", ".join(descriptions) if descriptions else ""
         return score, description
